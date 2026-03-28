@@ -3,9 +3,6 @@
   "outputDirectory": "frontend/dist",
   "framework": "vite",
   "installCommand": "npm install --prefix frontend && pip install -r requirements.txt",
-  "env": {
-    "VITE_API_BASE_URL": "@api_base_url"
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
