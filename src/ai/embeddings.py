@@ -5,13 +5,14 @@ Handles text embedding generation using sentence-transformers.
 
 import logging
 from typing import List
-import numpy as np
 
 try:
+    import numpy as np
     from sentence_transformers import SentenceTransformer
     EMBEDDINGS_AVAILABLE = True
 except ImportError:
     EMBEDDINGS_AVAILABLE = False
+    np = None
     SentenceTransformer = None
 
 from ..utils.config import get_config
