@@ -3,8 +3,24 @@
  * Handles all communication with the FastAPI backend
  */
 
-const API_BASE = 'http://localhost:8000';
-const WS_URL = 'ws://localhost:8000/api/ws/chat';
+// Use environment variable for API URL, fallback to localhost for development
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+// Build WebSocket URL based on API_BASE
+function getWebSocketUrl(): string {
+  let wsBase = API_BASE.replace(/\/$/, '');
+  
+  // If API_BASE is relative (like /api), build full URL from current location
+  if (!wsBase.startsWith('http')) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsBase = `${protocol}//${window.location.host}${wsBase}`;
+  }
+  
+  // Convert http/https to ws/wss
+  wsBase = wsBase.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+  
+  return `${wsBase}/api/ws/chat`;
+}
 
 // Types
 export interface ChatMessage {
@@ -121,7 +137,8 @@ export class TarsWebSocket {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
-      this.ws = new WebSocket(WS_URL);
+      const wsUrl = getWebSocketUrl();
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
