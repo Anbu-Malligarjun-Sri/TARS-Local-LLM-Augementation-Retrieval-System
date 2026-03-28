@@ -1,13 +1,10 @@
 # TARS Chatbot v2 - Enhanced Architecture
-# Dependencies required for backend/runtime deployment.
+# Minimal dependencies for FastAPI backend runtime on Vercel.
+# Optional RAG/ML packages can be installed separately for local use.
 
-# Core AI/ML
+# LLM Providers
 openai>=1.12.0
 google-generativeai>=0.4.0
-sentence-transformers>=2.3.0
-chromadb>=0.4.22
-langchain>=0.1.0
-langchain-community>=0.0.20
 
 # Voice (optional; Windows-focused local feature)
 pyttsx3>=2.90; platform_system == "Windows"
