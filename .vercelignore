@@ -1,0 +1,20 @@
+# Exclude local/dev artifacts
+.venv/
+.venv-1/
+.vscode/
+__pycache__/
+*.pyc
+
+# Exclude heavy non-runtime assets
+Images/
+Images of TARS/
+TARS_AI_Course/
+Datasets Questions and Answers of TARS/
+finetuning/
+
+# Frontend is deployed separately
+frontend/
+
+# Exclude local data caches and logs
+data/conversations/
+data/vector_db/

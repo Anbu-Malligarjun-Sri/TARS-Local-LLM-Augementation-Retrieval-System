@@ -1,5 +1,5 @@
 # TARS Chatbot v2 - Enhanced Architecture
-# Dependencies and requirements for the project
+# Dependencies required for backend/runtime deployment.
 
 # Core AI/ML
 openai>=1.12.0
@@ -9,10 +9,10 @@ chromadb>=0.4.22
 langchain>=0.1.0
 langchain-community>=0.0.20
 
-# Voice
-pyttsx3>=2.90
-SpeechRecognition>=3.10.0
-pyaudio>=0.2.14
+# Voice (optional; Windows-focused local feature)
+pyttsx3>=2.90; platform_system == "Windows"
+SpeechRecognition>=3.10.0; platform_system == "Windows"
+pyaudio>=0.2.14; platform_system == "Windows"
 
 # Backend API
 fastapi>=0.109.0
@@ -34,10 +34,10 @@ tiktoken>=0.5.2
 rich>=13.7.0
 typer>=0.9.0
 
-# Testing
-pytest>=7.4.0
-pytest-asyncio>=0.23.0
+# Testing (optional)
+pytest>=7.4.0; extra == "dev"
+pytest-asyncio>=0.23.0; extra == "dev"
 
-# Development
-black>=24.1.0
-isort>=5.13.0
+# Development (optional)
+black>=24.1.0; extra == "dev"
+isort>=5.13.0; extra == "dev"
