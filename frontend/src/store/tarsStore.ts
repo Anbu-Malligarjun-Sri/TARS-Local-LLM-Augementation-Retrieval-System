@@ -77,6 +77,7 @@ interface TarsState {
   
   // Actions - Sessions
   createNewSession: (name?: string) => void;
+  ensureCurrentSession: () => string;
   saveCurrentSession: () => void;
   loadSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
@@ -202,6 +203,24 @@ export const useTarsStore = create<TarsState>()(
           messages: [],
           totalSessions: state.totalSessions + 1,
         });
+      },
+
+      ensureCurrentSession: () => {
+        const state = get();
+        if (state.currentSessionId) return state.currentSessionId;
+        const newSession: ChatSession = {
+          id: crypto.randomUUID(),
+          name: generateSessionName(),
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((current) => ({
+          sessions: [newSession, ...current.sessions],
+          currentSessionId: newSession.id,
+          totalSessions: current.totalSessions + 1,
+        }));
+        return newSession.id;
       },
       
       saveCurrentSession: () => set((state) => {

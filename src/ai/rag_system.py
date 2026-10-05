@@ -126,8 +126,7 @@ class RAGSystem:
         self.embeddings = embedding_generator or get_embedding_generator()
         self.dataset_loader = DatasetLoader()
         
-        # Track loaded datasets
-        self._loaded_datasets: set = set()
+        self._loaded_datasets: set[str] = set()
         
         if auto_load_datasets:
             self._load_default_datasets()
@@ -156,6 +155,15 @@ class RAGSystem:
         if not entries:
             return 0
         
+        # Skip documents persisted by earlier processes as well as this one.
+        candidate_ids = []
+        for entry in entries:
+            content_hash = hashlib.md5(
+                (entry["question"] + entry["answer"]).encode()
+            ).hexdigest()[:12]
+            candidate_ids.append(f"{entry['id']}_{content_hash}")
+        existing_ids = self.vector_store.existing_ids(candidate_ids)
+
         # Prepare documents for indexing
         doc_ids = []
         texts = []
@@ -168,8 +176,7 @@ class RAGSystem:
             ).hexdigest()[:12]
             doc_id = f"{entry['id']}_{content_hash}"
             
-            # Skip if already indexed
-            if doc_id in self._loaded_datasets:
+            if doc_id in existing_ids or doc_id in self._loaded_datasets:
                 continue
             
             # Combine question and answer for embedding
@@ -185,7 +192,6 @@ class RAGSystem:
                 "source": entry.get("source", "unknown")
             })
             
-            self._loaded_datasets.add(doc_id)
         
         if not doc_ids:
             logger.info("All documents already indexed")
@@ -193,10 +199,11 @@ class RAGSystem:
         
         # Generate embeddings
         logger.info(f"Generating embeddings for {len(texts)} documents...")
-        embeddings = self.embeddings.embed_batch(texts)
+        embeddings = self.embeddings.embed_documents(texts)
         
         # Add to vector store
         self.vector_store.add_documents(doc_ids, texts, embeddings, metadatas)
+        self._loaded_datasets.update(doc_ids)
         
         logger.info(f"Indexed {len(doc_ids)} new documents")
         return len(doc_ids)
@@ -226,7 +233,7 @@ class RAGSystem:
         # Search
         if topic:
             results = self.vector_store.search_by_topic(
-                query, topic, n_results
+                query, topic, n_results, query_embedding=query_embedding
             )
         else:
             results = self.vector_store.search(
@@ -238,13 +245,11 @@ class RAGSystem:
         if not results:
             return ""
         
-        # Filter by relevance (lower distance = higher relevance)
-        # ChromaDB returns L2 distance, so we need to convert to similarity
+        # Chroma's cosine distance is 1 - cosine similarity.
         relevant_results = []
         for result in results:
-            # Approximate conversion from L2 distance to similarity
-            # Lower distance = more similar
-            if result["distance"] < 2.0:  # Threshold for relevance
+            similarity = 1.0 - result["distance"]
+            if similarity >= min_relevance:
                 relevant_results.append(result)
         
         if not relevant_results:

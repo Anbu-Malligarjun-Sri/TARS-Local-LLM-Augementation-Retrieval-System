@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from dataclasses import dataclass, field, asdict
 import logging
+from uuid import uuid4
 
 
 logger = logging.getLogger("tars.memory")
@@ -82,7 +83,7 @@ class MemoryStore:
     def create_conversation(self, conversation_id: str | None = None) -> Conversation:
         """Create a new conversation."""
         if conversation_id is None:
-            conversation_id = f"conv_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            conversation_id = f"conv_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
         
         conversation = Conversation(id=conversation_id)
         self.conversations[conversation_id] = conversation
@@ -118,7 +119,7 @@ class MemoryStore:
         """Add a message to a conversation."""
         conversation = self.get_conversation(conversation_id)
         if conversation is None:
-            conversation = self.create_conversation()
+            conversation = self.create_conversation(conversation_id)
         
         msg = conversation.add_message(role, content, metadata)
         

@@ -105,6 +105,7 @@ export function useTarsChat() {
   // Send message function
   const sendMessage = useCallback((content: string) => {
     if (!content.trim()) return;
+    const conversationId = useTarsStore.getState().ensureCurrentSession();
 
     // Add user message to store
     addMessage({ role: 'user', content: content.trim() });
@@ -112,10 +113,10 @@ export function useTarsChat() {
 
     // Send via WebSocket with streaming
     if (wsRef.current?.isConnected()) {
-      wsRef.current.send(content.trim(), true);
+      wsRef.current.send(content.trim(), true, conversationId);
     } else {
       // Fallback to REST API
-      tarsApi.chat(content.trim())
+      tarsApi.chat(content.trim(), true, conversationId)
         .then((response) => {
           addMessage({
             role: 'tars',
@@ -139,7 +140,8 @@ export function useTarsChat() {
   // Clear chat and backend history
   const clearChat = useCallback(async () => {
     try {
-      await tarsApi.clearHistory();
+      const conversationId = useTarsStore.getState().currentSessionId;
+      await tarsApi.clearHistory(conversationId || undefined);
       useTarsStore.getState().clearMessages();
     } catch (error) {
       console.error('Failed to clear history:', error);

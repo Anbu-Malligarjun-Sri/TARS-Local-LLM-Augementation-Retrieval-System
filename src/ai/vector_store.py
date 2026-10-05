@@ -36,14 +36,14 @@ class VectorStore:
     def __init__(
         self,
         persist_dir: str | Path | None = None,
-        collection_name: str = "tars_knowledge"
+        collection_name: str | None = None
     ):
         if not CHROMA_AVAILABLE:
             raise ImportError("chromadb package not installed. Install with: pip install chromadb")
         
         config = get_config()
         self.persist_dir = Path(persist_dir or config.chroma_persist_dir)
-        self.collection_name = collection_name
+        self.collection_name = collection_name or config.chroma_collection_name
         
         # Ensure persist directory exists
         self.persist_dir.mkdir(parents=True, exist_ok=True)
@@ -57,11 +57,11 @@ class VectorStore:
         
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"description": "TARS knowledge base"}
+            name=self.collection_name,
+            metadata={"description": "TARS knowledge base", "hnsw:space": "cosine"}
         )
         
-        logger.info(f"Collection '{collection_name}' ready with {self.collection.count()} documents")
+        logger.info("Collection '%s' ready with %d documents", self.collection_name, self.collection.count())
     
     def add_document(
         self,
@@ -118,6 +118,13 @@ class VectorStore:
         
         self.collection.add(**add_kwargs)
         logger.info(f"Added {len(doc_ids)} documents")
+
+    def existing_ids(self, doc_ids: List[str]) -> set[str]:
+        """Return IDs already present in the collection."""
+        if not doc_ids:
+            return set()
+        existing = self.collection.get(ids=doc_ids, include=[])
+        return set(existing.get("ids", []))
     
     def search(
         self,
@@ -169,10 +176,16 @@ class VectorStore:
         self,
         query: str,
         topic: str,
-        n_results: int = 5
+        n_results: int = 5,
+        query_embedding: List[float] | None = None,
     ) -> List[Dict[str, Any]]:
         """Search within a specific topic."""
-        return self.search(query, n_results, where={"topic": topic})
+        return self.search(
+            query,
+            n_results,
+            where={"topic": topic},
+            query_embedding=query_embedding,
+        )
     
     def get_document(self, doc_id: str) -> Dict[str, Any] | None:
         """Get a specific document by ID."""
@@ -220,7 +233,7 @@ class VectorStore:
         self.client.delete_collection(self.collection_name)
         self.collection = self.client.create_collection(
             name=self.collection_name,
-            metadata={"description": "TARS knowledge base"}
+            metadata={"description": "TARS knowledge base", "hnsw:space": "cosine"}
         )
         logger.info("Cleared all documents from collection")
 
@@ -229,9 +242,9 @@ class VectorStore:
 _vector_store: VectorStore | None = None
 
 
-def get_vector_store() -> VectorStore:
+def get_vector_store(collection_name: str | None = None) -> VectorStore:
     """Get or create the global vector store."""
     global _vector_store
     if _vector_store is None:
-        _vector_store = VectorStore()
+        _vector_store = VectorStore(collection_name=collection_name)
     return _vector_store

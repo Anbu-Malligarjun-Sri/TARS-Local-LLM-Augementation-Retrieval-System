@@ -27,6 +27,7 @@ export interface ChatMessage {
   type: 'greeting' | 'response' | 'start' | 'chunk' | 'end';
   content?: string;
   full_response?: string;
+  conversation_id?: string;
 }
 
 export interface TarsSettings {
@@ -50,11 +51,11 @@ export interface RagStats {
 // REST API functions
 export const tarsApi = {
   // Chat endpoints
-  async chat(message: string, enhance = true): Promise<{ response: string; conversation_id?: string }> {
+  async chat(message: string, enhance = true, conversationId?: string): Promise<{ response: string; conversation_id?: string }> {
     const res = await fetch(`${API_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, enhance_response: enhance, stream: false }),
+      body: JSON.stringify({ message, enhance_response: enhance, stream: false, conversation_id: conversationId }),
     });
     if (!res.ok) throw new Error(`Chat failed: ${res.statusText}`);
     return res.json();
@@ -84,14 +85,16 @@ export const tarsApi = {
   },
 
   // History endpoints
-  async getHistory(): Promise<{ conversation_id: string; messages: unknown[]; count: number }> {
-    const res = await fetch(`${API_BASE}/api/history`);
+  async getHistory(conversationId?: string): Promise<{ conversation_id: string; messages: unknown[]; count: number }> {
+    const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : '';
+    const res = await fetch(`${API_BASE}/api/history${query}`);
     if (!res.ok) throw new Error(`Failed to get history: ${res.statusText}`);
     return res.json();
   },
 
-  async clearHistory(): Promise<{ message: string; status: string }> {
-    const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
+  async clearHistory(conversationId?: string): Promise<{ message: string; status: string }> {
+    const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : '';
+    const res = await fetch(`${API_BASE}/api/history${query}`, { method: 'DELETE' });
     if (!res.ok) throw new Error(`Failed to clear history: ${res.statusText}`);
     return res.json();
   },
@@ -175,9 +178,9 @@ export class TarsWebSocket {
     }
   }
 
-  send(message: string, stream = true): void {
+  send(message: string, stream = true, conversationId?: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ message, stream }));
+      this.ws.send(JSON.stringify({ message, stream, conversation_id: conversationId }));
     } else {
       console.error('WebSocket not connected');
     }

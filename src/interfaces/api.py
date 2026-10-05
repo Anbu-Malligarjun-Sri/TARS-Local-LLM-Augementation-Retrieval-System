@@ -12,6 +12,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+from uuid import UUID, uuid4
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -31,6 +32,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="User message to send to TARS")
     enhance_response: bool = Field(True, description="Whether to add personality enhancements")
     stream: bool = Field(False, description="Whether to stream the response")
+    conversation_id: UUID | None = Field(None, description="Conversation to continue")
 
 
 class ChatResponse(BaseModel):
@@ -140,19 +142,23 @@ async def chat(request: ChatRequest):
     """
     try:
         engine = get_engine()
+        conversation_id = str(request.conversation_id or uuid4())
         
         if request.stream:
-            # For streaming, redirect to streaming endpoint
             return StreamingResponse(
-                stream_response(request.message),
+                stream_response(request.message, conversation_id),
                 media_type="text/event-stream"
             )
         
-        response = engine.chat(request.message, enhance_response=request.enhance_response)
+        response = engine.chat(
+            request.message,
+            enhance_response=request.enhance_response,
+            conversation_id=conversation_id,
+        )
         
         return ChatResponse(
             response=response,
-            conversation_id=engine.memory.active_conversation_id
+            conversation_id=conversation_id
         )
     
     except Exception as e:
@@ -167,11 +173,11 @@ async def get_greeting():
     return {"greeting": engine.get_greeting()}
 
 
-async def stream_response(message: str):
+async def stream_response(message: str, conversation_id: str):
     """Generator for streaming responses."""
     engine = get_engine()
     
-    for chunk in engine.chat_stream(message):
+    for chunk in engine.chat_stream(message, conversation_id=conversation_id):
         yield f"data: {chunk}\n\n"
         await asyncio.sleep(0.01)  # Small delay for smooth streaming
     
@@ -183,16 +189,26 @@ async def websocket_chat(websocket: WebSocket):
     """WebSocket endpoint for real-time chat."""
     await websocket.accept()
     engine = get_engine()
+    connection_conversation_id = str(uuid4())
     
     # Send greeting
     greeting = engine.get_greeting()
-    await websocket.send_json({"type": "greeting", "content": greeting})
+    await websocket.send_json({
+        "type": "greeting",
+        "content": greeting,
+        "conversation_id": connection_conversation_id,
+    })
     
     try:
         while True:
             # Receive message
             data = await websocket.receive_json()
             message = data.get("message", "")
+            try:
+                conversation_id = str(UUID(str(data.get("conversation_id", connection_conversation_id))))
+            except (ValueError, TypeError):
+                await websocket.send_json({"type": "error", "content": "Invalid conversation ID"})
+                continue
             
             if not message:
                 continue
@@ -203,7 +219,7 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_json({"type": "start"})
                 
                 full_response = ""
-                for chunk in engine.chat_stream(message):
+                for chunk in engine.chat_stream(message, conversation_id=conversation_id):
                     full_response += chunk
                     await websocket.send_json({"type": "chunk", "content": chunk})
                     await asyncio.sleep(0.01)
@@ -211,7 +227,7 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_json({"type": "end", "full_response": full_response})
             else:
                 # Regular response
-                response = engine.chat(message)
+                response = engine.chat(message, conversation_id=conversation_id)
                 await websocket.send_json({"type": "response", "content": response})
     
     except WebSocketDisconnect:
@@ -243,40 +259,42 @@ async def update_settings(request: SettingsRequest):
     
     humor = request.humor / 100 if request.humor is not None else None
     honesty = request.honesty / 100 if request.honesty is not None else None
+    discretion = request.discretion / 100 if request.discretion is not None else None
     
-    settings = engine.update_personality(humor=humor, honesty=honesty)
+    settings = engine.update_personality(humor=humor, honesty=honesty, discretion=discretion)
     
     return SettingsResponse(
         humor=settings["humor"],
         honesty=settings["honesty"],
         discretion=settings["discretion"],
-        responseSpeed=request.responseSpeed or 60,
-        verbosity=request.verbosity or 50,
-        cautionLevel=request.cautionLevel or 40,
-        trustLevel=request.trustLevel or 70
+        responseSpeed=request.responseSpeed if request.responseSpeed is not None else 60,
+        verbosity=request.verbosity if request.verbosity is not None else 50,
+        cautionLevel=request.cautionLevel if request.cautionLevel is not None else 40,
+        trustLevel=request.trustLevel if request.trustLevel is not None else 70
     )
 
 
 # === History Endpoints ===
 
 @app.get("/api/history")
-async def get_history():
+async def get_history(conversation_id: UUID | None = None):
     """Get conversation history."""
     engine = get_engine()
-    history = engine.get_conversation_history()
+    selected_id = str(conversation_id) if conversation_id else None
+    history = engine.get_conversation_history(selected_id)
     
     return {
-        "conversation_id": engine.memory.active_conversation_id,
+        "conversation_id": selected_id or engine.memory.active_conversation_id,
         "messages": history,
         "count": len(history)
     }
 
 
 @app.delete("/api/history")
-async def clear_history():
+async def clear_history(conversation_id: UUID | None = None):
     """Clear conversation history."""
     engine = get_engine()
-    engine.clear_memory()
+    engine.clear_memory(str(conversation_id) if conversation_id else None)
     
     return {"message": "Conversation history cleared", "status": "success"}
 
