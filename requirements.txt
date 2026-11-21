@@ -39,3 +39,9 @@ pytest>=8.0.0
 # Development (optional)
 black>=24.1.0; extra == "dev"
 isort>=5.13.0; extra == "dev"
+
+# Phase 3 calendar and safe XML parsing
+icalendar>=6,<8
+recurring-ical-events>=3,<4
+tzdata
+defusedxml>=0.7,<1

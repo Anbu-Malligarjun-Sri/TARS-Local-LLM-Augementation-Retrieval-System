@@ -105,6 +105,9 @@ export function TerminalMessage({ message }: TerminalMessageProps) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
+                // Untrusted model/source text must not trigger automatic network
+                // requests through Markdown images (including tracking URLs).
+                img: () => null,
                 code({ node, className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || '');
                   const isInline = !match && !String(children).includes('\n');

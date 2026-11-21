@@ -467,6 +467,8 @@ def run_api(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
 # Routes inherit the application's owner authentication/origin middleware.
 from src.interfaces.memory_api import router as memory_router
 app.include_router(memory_router)
+from src.interfaces.tools_api import router as tools_router
+app.include_router(tools_router)
 
 @app.get("/api/conversations")
 async def list_conversations():

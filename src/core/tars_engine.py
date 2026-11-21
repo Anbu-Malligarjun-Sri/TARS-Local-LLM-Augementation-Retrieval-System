@@ -131,11 +131,15 @@ class TARSEngine:
         if not user_input:
             return self.personality.format_unknown_input()
         
-        # Check for special commands
-        special_response = self._handle_special_commands(user_input)
+        # Only explicit owner read intents can invoke Phase 3 tools. Source/model
+        # output is never parsed as a tool request or an approval.
+        from ..tools.chat import answer as tool_answer
+        special_response = tool_answer(self, user_input, conversation_id)
+        if special_response is None:
+            special_response = self._handle_special_commands(user_input)
         if special_response:
-            self.memory.add_message("user", user_input, conversation_id=conversation_id)
-            self.memory.add_message("assistant", special_response, conversation_id=conversation_id)
+            self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
+            self.memory.add_message("assistant", special_response, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             return special_response
         
         prompt, history = self._prepare_turn(user_input, conversation_id)
@@ -170,11 +174,15 @@ class TARSEngine:
             yield self.personality.format_unknown_input()
             return
         
-        # Check for special commands
-        special_response = self._handle_special_commands(user_input)
+        # Only explicit owner read intents can invoke Phase 3 tools. Source/model
+        # output is never parsed as a tool request or an approval.
+        from ..tools.chat import answer as tool_answer
+        special_response = tool_answer(self, user_input, conversation_id)
+        if special_response is None:
+            special_response = self._handle_special_commands(user_input)
         if special_response:
-            self.memory.add_message("user", user_input, conversation_id=conversation_id)
-            self.memory.add_message("assistant", special_response, conversation_id=conversation_id)
+            self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
+            self.memory.add_message("assistant", special_response, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             yield special_response
             return
         
