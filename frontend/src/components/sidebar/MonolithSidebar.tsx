@@ -1,3 +1,4 @@
+import { MemoryPanel } from '@/components/memory/MemoryPanel';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Settings, Volume2, VolumeX, History, Command, Keyboard } from 'lucide-react';
 import { useState } from 'react';
@@ -61,6 +62,7 @@ export function MonolithSidebar() {
           transition={{ delay: 0.1 }}
           className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
         >
+          <MemoryPanel />
           <PersonalityPanel />
           <ExtendedSettingsPanel />
           <SystemStatus />

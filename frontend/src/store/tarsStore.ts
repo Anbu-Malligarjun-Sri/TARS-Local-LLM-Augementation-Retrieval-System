@@ -1,3 +1,4 @@
+import { tarsApi } from '@/services/tarsApi';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -124,7 +125,7 @@ export const useTarsStore = create<TarsState>()(
       
       // Empty chat
       messages: [],
-      isConnected: true,
+      isConnected: false,
       
       // Sessions
       sessions: [],
@@ -264,6 +265,14 @@ export const useTarsStore = create<TarsState>()(
             })),
             isHistoryOpen: false,
           });
+          tarsApi.getHistory(sessionId).then(history => {
+            if (get().currentSessionId !== sessionId || get().status !== 'idle') return;
+            const messages = (history.messages as {role: string; content: string}[]).map(message => ({
+              id: crypto.randomUUID(), role: message.role === 'user' ? 'user' as const : 'tars' as const,
+              content: message.content, timestamp: new Date(),
+            }));
+            set({ messages });
+          }).catch(console.error);
         }
       },
       
@@ -324,7 +333,12 @@ export const useTarsStore = create<TarsState>()(
     }),
     {
       name: 'tars-storage',
+      onRehydrateStorage: () => state => {
+        if (state) state.messages = state.messages.map(message => ({ ...message, timestamp: new Date(message.timestamp), isStreaming: false }));
+      },
       partialize: (state) => ({
+        messages: state.messages,
+        currentSessionId: state.currentSessionId,
         sessions: state.sessions,
         totalMessages: state.totalMessages,
         totalSessions: state.totalSessions,

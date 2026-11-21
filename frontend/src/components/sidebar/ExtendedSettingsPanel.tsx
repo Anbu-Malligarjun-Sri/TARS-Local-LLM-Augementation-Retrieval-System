@@ -52,7 +52,7 @@ export function ExtendedSettingsPanel() {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-5 pt-2">
+            <fieldset disabled className="space-y-5 pt-2 opacity-50"><legend>These parameters are not supported yet.</legend>
               <TarsSlider
                 label="Response Speed"
                 value={responseSpeed}
@@ -92,7 +92,7 @@ export function ExtendedSettingsPanel() {
                 minLabel="Skeptical"
                 maxLabel="Trusting"
               />
-            </div>
+            </fieldset>
           </motion.div>
         )}
       </AnimatePresence>

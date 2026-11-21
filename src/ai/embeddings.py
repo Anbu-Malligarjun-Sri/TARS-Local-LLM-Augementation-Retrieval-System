@@ -33,7 +33,7 @@ class EmbeddingGenerator:
         
         self.client = OpenAI(
             base_url=config.lm_studio_base_url,
-            api_key="lm-studio",
+            api_key="lm-studio", timeout=config.request_timeout, max_retries=0,
         )
         self.embedding_dim = config.embedding_dimension
         logger.info("Using LM Studio embedding model: %s (%d dimensions)", self.model_name, self.embedding_dim)

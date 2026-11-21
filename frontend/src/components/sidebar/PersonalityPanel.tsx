@@ -26,7 +26,7 @@ export function PersonalityPanel() {
         />
         
         <TarsSlider
-          label="Honesty"
+          label="Directness"
           value={honesty}
           onChange={setHonesty}
           icon={<Eye className="w-3.5 h-3.5" />}

@@ -71,7 +71,7 @@ class OpenAIHandler(BaseLLMHandler):
         
         self.client = OpenAI(
             base_url=self.base_url,
-            api_key=self.api_key
+            api_key=self.api_key, timeout=config.request_timeout, max_retries=0
         )
     
     def generate(self, message: str, conversation_history: list[dict] | None = None) -> str:
@@ -120,7 +120,7 @@ class LMStudioHandler(OpenAIHandler):
             base_url=config.lm_studio_base_url,
             api_key="lm-studio",  # LM Studio doesn't need a real key
             model=config.lm_studio_model,
-            reasoning_effort="none",
+            reasoning_effort=config.lm_studio_reasoning_effort,
         )
 
 
@@ -135,7 +135,7 @@ class OllamaHandler(BaseLLMHandler):
         # Use OpenAI-compatible endpoint
         self.client = OpenAI(
             base_url=f"{self.base_url}/v1",
-            api_key="ollama"  # Ollama doesn't need a real key
+            api_key="ollama", timeout=config.request_timeout, max_retries=0
         )
     
     def generate(self, message: str, conversation_history: list[dict] | None = None) -> str:
@@ -190,7 +190,7 @@ class GeminiHandler(BaseLLMHandler):
                 role = "user" if msg["role"] == "user" else "model"
                 history.append({"role": role, "parts": [msg["content"]]})
         chat = self.model.start_chat(history=history)
-        response = chat.send_message(message)
+        response = chat.send_message(message, request_options={"timeout": self.config.request_timeout})
         content = (response.text or "").strip()
         if not content:
             raise RuntimeError("Gemini returned an empty response")
@@ -204,7 +204,7 @@ class GeminiHandler(BaseLLMHandler):
                 role = "user" if msg["role"] == "user" else "model"
                 history.append({"role": role, "parts": [msg["content"]]})
         chat = self.model.start_chat(history=history)
-        response = chat.send_message(message, stream=True)
+        response = chat.send_message(message, stream=True, request_options={"timeout": self.config.request_timeout})
         for chunk in response:
             if chunk.text:
                 yield chunk.text
@@ -252,6 +252,8 @@ class MultiProviderLLM:
     
     def __init__(self, config: TARSConfig | None = None):
         self.config = config or get_config()
+        if not self.config.allow_cloud and self.config.llm_provider in {"openai", "gemini"}:
+            raise ValueError("Cloud provider requires ALLOW_CLOUD=true")
         self.primary_handler = get_llm_handler(self.config)
         self.fallback_handlers: list[BaseLLMHandler] = []
         
@@ -264,7 +266,7 @@ class MultiProviderLLM:
         primary = self.config.llm_provider.lower()
         
         for provider in providers_to_try:
-            if provider != primary:
+            if provider != primary and (self.config.allow_cloud or provider in {"lm_studio", "ollama"}):
                 try:
                     # Create a temporary config for the fallback provider
                     handler = self._create_handler_for_provider(provider)

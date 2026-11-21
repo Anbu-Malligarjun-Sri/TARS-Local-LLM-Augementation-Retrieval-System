@@ -1,0 +1,25 @@
+# Optional local services. Set TARS_NEO4J_PASSWORD in the shell before starting.
+# This file provisions dedicated private databases; no service starts automatically.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: tars
+      POSTGRES_USER: tars
+      POSTGRES_PASSWORD: ${TARS_POSTGRES_PASSWORD:?Set TARS_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - tars-postgres:/var/lib/postgresql/data
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/${TARS_NEO4J_PASSWORD:?Set TARS_NEO4J_PASSWORD}
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - tars-neo4j:/data
+volumes:
+  tars-postgres:
+  tars-neo4j:

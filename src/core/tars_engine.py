@@ -40,9 +40,13 @@ class TARSEngine:
         
         # Initialize components
         self.llm = llm_handler or MultiProviderLLM(self.config)
-        self.memory = memory_store or get_memory_store(
-            persist_dir=self.config.project_root / "data" / "conversations"
-        )
+        if memory_store is not None:
+            self.memory = memory_store
+        elif self.config.memory_backend == "sql":
+            from ..memory.service import create_store
+            self.memory = create_store()
+        else:
+            self.memory = get_memory_store(persist_dir=self.config.project_root / "data" / "conversations")
         self.personality = response_generator or get_response_generator()
         
         # Initialize RAG system if available and enabled
@@ -67,12 +71,27 @@ class TARSEngine:
         user_input: str,
         conversation_id: str | None = None,
     ) -> tuple[str, list[dict]]:
-        self.memory.add_message("user", user_input, conversation_id=conversation_id)
+        repository = getattr(self.memory, "repository", None)
+        if repository is not None and self.config.allow_cloud:
+            # A session used with local-only context cannot later disclose that
+            # context through its transcript when cloud routing is enabled.
+            prior = self.memory.get_conversation(conversation_id)
+            if prior and any(m.metadata.get("local_only_context") for m in prior.messages):
+                raise PermissionError("This conversation contains local-only memory; use local routing or start a new conversation")
+        self.memory.add_message("user", user_input, conversation_id=conversation_id,
+                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud})
         history = self.memory.get_history(
             conversation_id=conversation_id,
             max_messages=20,
         )
         history = history[:-1] if history else []
+
+        repository = getattr(self.memory, "repository", None)
+        if repository is not None:
+            # Conservatively omit local-only memories whenever cloud fallback is eligible.
+            personal = repository.context(self.memory.owner, user_input, cloud=self.config.allow_cloud)
+            if personal:
+                user_input = personal + "\n\nCurrent user request: " + user_input
 
         if self.use_rag and self.rag_system:
             try:
@@ -115,6 +134,8 @@ class TARSEngine:
         # Check for special commands
         special_response = self._handle_special_commands(user_input)
         if special_response:
+            self.memory.add_message("user", user_input, conversation_id=conversation_id)
+            self.memory.add_message("assistant", special_response, conversation_id=conversation_id)
             return special_response
         
         prompt, history = self._prepare_turn(user_input, conversation_id)
@@ -152,6 +173,8 @@ class TARSEngine:
         # Check for special commands
         special_response = self._handle_special_commands(user_input)
         if special_response:
+            self.memory.add_message("user", user_input, conversation_id=conversation_id)
+            self.memory.add_message("assistant", special_response, conversation_id=conversation_id)
             yield special_response
             return
         
@@ -175,6 +198,15 @@ class TARSEngine:
     def _handle_special_commands(self, user_input: str) -> str | None:
         """Handle special commands and queries."""
         lower_input = user_input.lower()
+        if lower_input.startswith("/remember "):
+            repository = getattr(self.memory, "repository", None)
+            if repository is None:
+                return "Personal memory requires MEMORY_BACKEND=sql."
+            parts = [part.strip() for part in user_input[len("/remember "):].split("|", 2)]
+            if len(parts) != 3 or not all(parts):
+                return "Use /remember subject | relationship | value. These memories stay local unless you change their cloud permission."
+            claim = repository.add_claim(self.memory.owner, *parts)
+            return f"Remembered. Fact ID: {claim['id']}. You can inspect, correct or forget it in Personal memory."
         
         # Time queries
         if any(phrase in lower_input for phrase in ["what time", "time now", "current time", "what's the time"]):

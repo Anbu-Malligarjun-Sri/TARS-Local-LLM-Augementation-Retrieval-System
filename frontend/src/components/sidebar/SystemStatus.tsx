@@ -8,23 +8,23 @@ export function SystemStatus() {
   const { status, isConnected, humor, honesty, discretion } = useTarsStore();
 
   const systems = [
-    { 
-      icon: Wifi, 
-      label: 'NETWORK', 
+    {
+      icon: Wifi,
+      label: 'NETWORK',
       status: isConnected ? 'ONLINE' : 'OFFLINE',
-      ok: isConnected 
+      ok: isConnected
     },
-    { 
-      icon: Database, 
-      label: 'RAG DB', 
-      status: 'SYNCED',
-      ok: true 
+    {
+      icon: Database,
+      label: 'RAG DB',
+      status: 'NOT PROBED',
+      ok: false
     },
-    { 
-      icon: Cpu, 
-      label: 'LLM', 
-      status: 'ACTIVE',
-      ok: true 
+    {
+      icon: Cpu,
+      label: 'LLM',
+      status: 'NOT PROBED',
+      ok: false
     },
   ];
 
@@ -37,11 +37,11 @@ export function SystemStatus() {
         </h3>
         <CueLight status={status} />
       </div>
-      
+
       {/* System Indicators */}
       <div className="space-y-2">
         {systems.map((system) => (
-          <div 
+          <div
             key={system.label}
             className="flex items-center justify-between py-2 px-3 bg-tars-dark/50 rounded border border-border/50"
           >
@@ -60,7 +60,7 @@ export function SystemStatus() {
           </div>
         ))}
       </div>
-      
+
       {/* Current Config Display */}
       <div className="pt-4 border-t border-border">
         <p className="font-terminal text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-3">
@@ -81,7 +81,7 @@ export function SystemStatus() {
           </div>
         </div>
       </div>
-      
+
       {/* Heartbeat Animation */}
       <div className="flex items-center gap-2">
         <Activity className="w-3 h-3 text-tars-amber" />

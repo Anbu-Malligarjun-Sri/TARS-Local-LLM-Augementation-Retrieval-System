@@ -10,7 +10,7 @@ export function CommandInput() {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const { isVoiceMode, toggleVoiceMode, setStatus, status } = useTarsStore();
-  const { sendMessage } = useTarsChat();
+  const { sendMessage, cancelTurn } = useTarsChat();
   
   const isListening = status === 'listening';
 
@@ -90,6 +90,8 @@ export function CommandInput() {
           {/* Voice Toggle */}
           <button
             type="button"
+            disabled
+            title="Browser voice is planned for Phase 5"
             onClick={handleVoiceToggle}
             className={cn(
               "p-2 rounded transition-all duration-200 mechanical-click",
@@ -116,7 +118,8 @@ export function CommandInput() {
           </button>
         </div>
         
-        {/* Input hint */}
+        {status !== 'idle' && <button type="button" onClick={cancelTurn}>Stop response</button>}
+      {/* Input hint */}
         <div className="flex justify-between mt-2 px-1">
           <span className="font-terminal text-[10px] text-muted-foreground/50">
             PRESS ENTER TO TRANSMIT

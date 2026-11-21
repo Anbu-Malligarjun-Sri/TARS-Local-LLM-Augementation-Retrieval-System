@@ -132,7 +132,8 @@ def test_embedding_generator_batches_and_checks_dimension(monkeypatch):
     assert calls[-1][1] == ["search_query: question"]
 
 
-def test_rest_and_websocket_preserve_conversation_ids():
+def test_rest_and_websocket_preserve_conversation_ids(monkeypatch):
+    monkeypatch.setattr(api_module, "authenticated", lambda *args: True)
     engine, _, _ = make_engine()
     previous_engine = api_module._engine
     api_module._engine = engine

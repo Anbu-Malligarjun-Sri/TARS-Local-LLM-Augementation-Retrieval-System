@@ -35,7 +35,7 @@ export function TerminalMessage({ message }: TerminalMessageProps) {
   const setGesture = useTarsRobotStore((state) => state.setGesture);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
+    return new Date(date).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -54,7 +54,7 @@ export function TerminalMessage({ message }: TerminalMessageProps) {
     if (!isUser && gestures.length > 0) {
       gestures.forEach((gesture) => setGesture(gesture));
     }
-  }, [message.id, isUser, JSON.stringify(gestures), setGesture]);
+  }, [message.id, isUser, gestures, setGesture]);
 
   return (
     <motion.div

@@ -9,6 +9,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import asyncio
+import json
+import time
+import threading
+from datetime import datetime, timezone
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
+from src.interfaces.foundation import ORIGINS, authenticated, pair, connect
+from fastapi import Request, Response, Query
+from pydantic import ValidationError
 import logging
 import sys
 from pathlib import Path
@@ -29,10 +38,10 @@ logger = logging.getLogger("tars.api")
 
 # Pydantic models for request/response
 class ChatRequest(BaseModel):
-    message: str = Field(..., description="User message to send to TARS")
+    message: str = Field(..., min_length=1, max_length=16000, description="User message to send to TARS")
     enhance_response: bool = Field(True, description="Whether to add personality enhancements")
     stream: bool = Field(False, description="Whether to stream the response")
-    conversation_id: UUID | None = Field(None, description="Conversation to continue")
+    conversation_id: UUID = Field(..., description="Conversation to continue")
 
 
 class ChatResponse(BaseModel):
@@ -87,7 +96,7 @@ app = FastAPI(
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=list(ORIGINS),  # In production, specify actual origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -97,13 +106,20 @@ app.add_middleware(
 _engine: TARSEngine | None = None
 
 
+_engine_lock = threading.Lock()
+
 def get_engine() -> TARSEngine:
     """Get or create the TARS engine."""
     global _engine
-    if _engine is None:
-        _engine = get_tars_engine()
-    return _engine
-
+    with _engine_lock:
+        if _engine is None:
+            _engine = get_tars_engine()
+            with connect() as db:
+                row = db.execute("SELECT value FROM settings WHERE id=1").fetchone()
+            if row:
+                saved = json.loads(row[0])
+                _engine.update_personality(**{k: v / 100 for k, v in saved.items()})
+        return _engine
 
 # === Health & Status ===
 
@@ -121,124 +137,199 @@ async def root():
 async def health_check():
     """Check system health status."""
     config = get_config()
-    engine = get_engine()
+    engine = await asyncio.to_thread(get_engine)
     
     return HealthResponse(
-        status="operational",
+        status="configured (provider not probed)",
         llm_provider=config.llm_provider,
         rag_enabled=engine.use_rag,
-        voice_enabled=config.voice_enabled
+        voice_enabled=False
     )
 
 
 # === Chat Endpoints ===
 
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """
-    Send a message to TARS and get a response.
-    
-    This is the main chat endpoint for interacting with TARS.
-    """
-    try:
-        engine = get_engine()
-        conversation_id = str(request.conversation_id or uuid4())
-        
-        if request.stream:
-            return StreamingResponse(
-                stream_response(request.message, conversation_id),
-                media_type="text/event-stream"
-            )
-        
-        response = engine.chat(
-            request.message,
-            enhance_response=request.enhance_response,
-            conversation_id=conversation_id,
-        )
-        
-        return ChatResponse(
-            response=response,
-            conversation_id=conversation_id
-        )
-    
-    except Exception as e:
-        logger.error(f"Chat error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Bounded generation workers. A cancelled SDK call retains its worker until its
+# finite network timeout, preventing unbounded abandoned threads.
+_executor = ThreadPoolExecutor(max_workers=4)
+_locks = {}
+_active = {}
+_rates = defaultdict(deque)
 
+@app.middleware("http")
+async def private_access(request: Request, call_next):
+    from starlette.responses import JSONResponse
+    key = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    bucket = _rates[(key, request.url.path in {"/api/pair", "/api/launch"})]
+    while bucket and bucket[0] < now - 60:
+        bucket.popleft()
+    limit = 10 if request.url.path in {"/api/pair", "/api/launch"} else 120
+    if len(bucket) >= limit:
+        return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+    bucket.append(now)
+    length = request.headers.get("content-length", "0")
+    if not length.isdigit() or int(length) > 65536:
+        return JSONResponse({"detail": "Payload too large"}, status_code=413)
+    origin = request.headers.get("origin")
+    if origin and origin not in ORIGINS:
+        return JSONResponse({"detail": "Origin denied"}, status_code=403)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    if request.url.path not in {"/api/pair", "/api/launch"} and not authenticated(request.headers, request.cookies):
+        return JSONResponse({"detail": "Pair this device first; configure OWNER_TOKEN on the server"}, status_code=401)
+    return await call_next(request)
+
+class PairRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=512)
+
+@app.post("/api/pair")
+async def pair_device(body: PairRequest, response: Response, request: Request):
+    response.set_cookie("tars_device", pair(body.token), httponly=True,
+                        samesite="strict", secure=request.url.scheme == "https", max_age=86400*30)
+    return {"status": "paired"}
+
+@app.post("/api/launch")
+async def launch_device(body: PairRequest, response: Response, request: Request):
+    from src.interfaces.launch import redeem
+    response.set_cookie("tars_device", redeem(body.token), httponly=True,
+                        samesite="strict", secure=request.url.scheme == "https", max_age=86400*30)
+    return {"status":"paired"}
+
+@app.delete("/api/pair")
+async def unpair(request: Request, response: Response):
+    import hashlib
+    with connect() as db:
+        db.execute("DELETE FROM devices WHERE token=?", (hashlib.sha256(request.cookies.get("tars_device", "").encode()).hexdigest(),))
+    response.delete_cookie("tars_device")
+    return {"status": "unpaired"}
+
+async def events(message, conversation_id, turn_id):
+    if len(_active) >= 4:
+        yield {"schema_version": 1, "type": "error", "turn_id": turn_id, "conversation_id": conversation_id,
+               "content": "Generation capacity reached; retry shortly."}
+        return
+    sequence = 0
+    cancelled = asyncio.Event()
+    _active[turn_id] = cancelled
+    def event(kind, **payload):
+        nonlocal sequence
+        sequence += 1
+        return dict(schema_version=1, type=kind, conversation_id=conversation_id,
+                    turn_id=turn_id, message_id=turn_id, sequence=sequence, timestamp=datetime.now(timezone.utc).isoformat(), **payload)
+    with connect() as db:
+        db.execute("INSERT INTO turns VALUES (?,?,?,?)", (turn_id, conversation_id, "running", None))
+    state = "error"
+    full = ""
+    iterator = None
+    try:
+        yield event("start")
+        async with _locks.setdefault(conversation_id, asyncio.Lock()):
+            engine = await asyncio.to_thread(get_engine)
+            iterator = iter(engine.chat_stream(message, conversation_id=conversation_id))
+            full = ""
+            deadline = time.monotonic() + get_config().request_timeout
+            sentinel = object()
+            while True:
+                if cancelled.is_set():
+                    state = "cancelled"
+                    yield event(state)
+                    break
+                if time.monotonic() > deadline:
+                    raise TimeoutError("Turn deadline exceeded")
+                chunk = await asyncio.get_running_loop().run_in_executor(_executor, next, iterator, sentinel)
+                if cancelled.is_set():
+                    state = "cancelled"
+                    yield event(state)
+                    break
+                if chunk is sentinel:
+                    state = "completed"
+                    yield event("end", full_response=full)
+                    break
+                full += chunk
+                yield event("chunk", content=chunk)
+    except asyncio.CancelledError:
+        state = "cancelled"
+        raise
+    except Exception:
+        logger.exception("Turn failed: %s", turn_id)
+        yield event("error", content="Generation failed. You can retry this turn.")
+    finally:
+        if iterator is not None:
+            # next() has finished before closing the suspended generator.
+            try:
+                iterator.close()
+            except (ValueError, RuntimeError):
+                pass
+        if state != "completed" and full:
+            get_engine().memory.add_message("assistant", full, conversation_id=conversation_id,
+                                            metadata={"turn_id": turn_id, "state": state})
+        _active.pop(turn_id, None)
+        with connect() as db:
+            db.execute("UPDATE turns SET state=? WHERE id=?", (state, turn_id))
+
+@app.post("/api/turns/{turn_id}/cancel")
+async def cancel_turn(turn_id: UUID):
+    flag = _active.get(str(turn_id))
+    if flag:
+        flag.set()
+    return {"status": "cancellation_requested" if flag else "not_active"}
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    conversation_id = str(request.conversation_id)
+    turn_id = str(uuid4())
+    if request.stream:
+        async def stream():
+            async for item in events(request.message, conversation_id, turn_id):
+                yield "data: " + json.dumps(item) + "\n\n"
+        return StreamingResponse(stream(), media_type="text/event-stream")
+    result = ""
+    async for item in events(request.message, conversation_id, turn_id):
+        if item["type"] == "chunk":
+            result += item["content"]
+        if item["type"] == "error":
+            raise HTTPException(503, item["content"])
+    return {"response": result, "conversation_id": conversation_id, "turn_id": turn_id}
 
 @app.get("/api/chat/greeting")
 async def get_greeting():
-    """Get a TARS greeting message."""
-    engine = get_engine()
-    return {"greeting": engine.get_greeting()}
-
-
-async def stream_response(message: str, conversation_id: str):
-    """Generator for streaming responses."""
-    engine = get_engine()
-    
-    for chunk in engine.chat_stream(message, conversation_id=conversation_id):
-        yield f"data: {chunk}\n\n"
-        await asyncio.sleep(0.01)  # Small delay for smooth streaming
-    
-    yield "data: [DONE]\n\n"
-
+    return {"greeting": "TARS online. Ready when you are."}
 
 @app.websocket("/api/ws/chat")
 async def websocket_chat(websocket: WebSocket):
-    """WebSocket endpoint for real-time chat."""
+    if websocket.headers.get("origin") not in ORIGINS | {None} or not authenticated(websocket.headers, websocket.cookies):
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
-    engine = get_engine()
-    connection_conversation_id = str(uuid4())
-    
-    # Send greeting
-    greeting = engine.get_greeting()
-    await websocket.send_json({
-        "type": "greeting",
-        "content": greeting,
-        "conversation_id": connection_conversation_id,
-    })
-    
+    await websocket.send_json({"type": "greeting", "content": "TARS connected."})
     try:
         while True:
-            # Receive message
-            data = await websocket.receive_json()
-            message = data.get("message", "")
+            raw = await websocket.receive_text()
+            if len(raw.encode()) > 65536:
+                await websocket.close(code=1009)
+                return
             try:
-                conversation_id = str(UUID(str(data.get("conversation_id", connection_conversation_id))))
-            except (ValueError, TypeError):
-                await websocket.send_json({"type": "error", "content": "Invalid conversation ID"})
+                data = json.loads(raw)
+            except ValueError:
+                await websocket.send_json({"type": "error", "content": "Invalid JSON"})
                 continue
-            
-            if not message:
+            try:
+                request = ChatRequest.model_validate(data)
+            except ValidationError:
+                await websocket.send_json({"type": "error", "content": "Invalid chat request"})
                 continue
-            
-            # Check for streaming mode
-            if data.get("stream", False):
-                # Stream response
-                await websocket.send_json({"type": "start"})
-                
-                full_response = ""
-                for chunk in engine.chat_stream(message, conversation_id=conversation_id):
-                    full_response += chunk
-                    await websocket.send_json({"type": "chunk", "content": chunk})
-                    await asyncio.sleep(0.01)
-                
-                await websocket.send_json({"type": "end", "full_response": full_response})
-            else:
-                # Regular response
-                response = engine.chat(message, conversation_id=conversation_id)
-                await websocket.send_json({"type": "response", "content": response})
-    
+            async for item in events(request.message, str(request.conversation_id), str(uuid4())):
+                await websocket.send_json(item)
     except WebSocketDisconnect:
-        logger.info("WebSocket disconnected")
-
+        pass
 
 # === Settings Endpoints ===
 
 @app.get("/api/settings", response_model=SettingsResponse)
 async def get_settings():
     """Get current TARS personality settings."""
+    await asyncio.to_thread(get_engine)
     config = get_config()
     
     return SettingsResponse(
@@ -255,13 +346,19 @@ async def get_settings():
 @app.put("/api/settings", response_model=SettingsResponse)
 async def update_settings(request: SettingsRequest):
     """Update TARS personality settings."""
-    engine = get_engine()
+    if _active:
+        raise HTTPException(409, "Wait for active turns before changing settings")
+    engine = await asyncio.to_thread(get_engine)
     
     humor = request.humor / 100 if request.humor is not None else None
     honesty = request.honesty / 100 if request.honesty is not None else None
     discretion = request.discretion / 100 if request.discretion is not None else None
     
+    if any(getattr(request, key) is not None for key in ("responseSpeed", "verbosity", "cautionLevel", "trustLevel")):
+        raise HTTPException(422, "Extended settings are not supported")
     settings = engine.update_personality(humor=humor, honesty=honesty, discretion=discretion)
+    with connect() as db:
+        db.execute("INSERT OR REPLACE INTO settings VALUES (1,?)", (json.dumps(settings),))
     
     return SettingsResponse(
         humor=settings["humor"],
@@ -277,9 +374,9 @@ async def update_settings(request: SettingsRequest):
 # === History Endpoints ===
 
 @app.get("/api/history")
-async def get_history(conversation_id: UUID | None = None):
+async def get_history(conversation_id: UUID):
     """Get conversation history."""
-    engine = get_engine()
+    engine = await asyncio.to_thread(get_engine)
     selected_id = str(conversation_id) if conversation_id else None
     history = engine.get_conversation_history(selected_id)
     
@@ -291,9 +388,11 @@ async def get_history(conversation_id: UUID | None = None):
 
 
 @app.delete("/api/history")
-async def clear_history(conversation_id: UUID | None = None):
+async def clear_history(conversation_id: UUID):
     """Clear conversation history."""
-    engine = get_engine()
+    if _active:
+        raise HTTPException(409, "Wait for active turns before clearing history")
+    engine = await asyncio.to_thread(get_engine)
     engine.clear_memory(str(conversation_id) if conversation_id else None)
     
     return {"message": "Conversation history cleared", "status": "success"}
@@ -304,7 +403,7 @@ async def clear_history(conversation_id: UUID | None = None):
 @app.get("/api/rag/stats", response_model=RAGStatsResponse)
 async def get_rag_stats():
     """Get RAG system statistics."""
-    engine = get_engine()
+    engine = await asyncio.to_thread(get_engine)
     
     if not engine.use_rag or not engine.rag_system:
         raise HTTPException(status_code=503, detail="RAG system not enabled")
@@ -316,45 +415,63 @@ async def get_rag_stats():
 @app.post("/api/rag/index")
 async def index_datasets(directory: str = None):
     """Index datasets for RAG. Uses default directory if not specified."""
-    engine = get_engine()
+    engine = await asyncio.to_thread(get_engine)
     
     if not engine.use_rag or not engine.rag_system:
         raise HTTPException(status_code=503, detail="RAG system not enabled")
     
     try:
         if directory:
-            count = engine.rag_system.index_directory(Path(directory))
+            allowed = (get_config().project_root / "Datasets Questions and Answers of TARS").resolve()
+            selected = Path(directory).resolve()
+            if not selected.is_relative_to(allowed):
+                raise HTTPException(403, "Ingestion path denied")
+            count = await asyncio.to_thread(engine.rag_system.index_directory, selected)
         else:
             # Re-index default datasets
             config = get_config()
             datasets_dir = config.project_root / "Datasets Questions and Answers of TARS"
-            count = engine.rag_system.index_directory(datasets_dir)
+            count = await asyncio.to_thread(engine.rag_system.index_directory, datasets_dir)
         
         return {"indexed": count, "total": engine.rag_system.get_stats()["total_documents"]}
     
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Indexing failed")
 
 
 @app.post("/api/rag/search")
-async def search_rag(query: str, n_results: int = 5, topic: str = None):
+async def search_rag(query: str, n_results: int = Query(default=5, ge=1, le=20), topic: str = None):
     """Search the RAG knowledge base."""
-    engine = get_engine()
+    engine = await asyncio.to_thread(get_engine)
     
     if not engine.use_rag or not engine.rag_system:
         raise HTTPException(status_code=503, detail="RAG system not enabled")
     
-    context = engine.rag_system.retrieve(query, n_results=n_results, topic=topic)
+    context = await asyncio.to_thread(engine.rag_system.retrieve, query, n_results=n_results, topic=topic)
     
     return {"query": query, "results": context}
 
 
 # Run with uvicorn
-def run_api(host: str = "0.0.0.0", port: int = 8000, reload: bool = False):
+def run_api(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
     """Run the API server."""
     import uvicorn
     uvicorn.run("src.interfaces.api:app", host=host, port=port, reload=reload)
 
+
+
+
+
+# Routes inherit the application's owner authentication/origin middleware.
+from src.interfaces.memory_api import router as memory_router
+app.include_router(memory_router)
+
+@app.get("/api/conversations")
+async def list_conversations():
+    engine = await asyncio.to_thread(get_engine)
+    return {"conversations": await asyncio.to_thread(engine.memory.list_conversations)}
 
 if __name__ == "__main__":
     run_api()

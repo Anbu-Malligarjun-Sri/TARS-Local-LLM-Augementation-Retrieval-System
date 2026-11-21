@@ -1,0 +1,3 @@
+# Optional external Phase 2 deployment drivers; local SQLite requires neither.
+psycopg[binary]>=3.2,<4
+neo4j>=5.26,<7

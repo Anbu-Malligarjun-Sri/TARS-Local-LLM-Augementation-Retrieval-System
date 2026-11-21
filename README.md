@@ -4,6 +4,8 @@
 
 # TARS Chatbot
 
+> **Personal intelligence roadmap (2026-11-21):** Read the [codebase assessment and phased architecture plan](docs/TARS_ARCHITECTURE_PLAN.md) for the migration toward shared graph memory, model-independent personality, coding assistance, voice and phone handling. The six project context files start at [project overview](context/project-overview.md); actual implementation status is in the [progress tracker](context/progress-tracker.md). The feature descriptions below describe the legacy project and should be read alongside the audit's capability limitations.
+
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi)](https://fastapi.tiangolo.com)
@@ -77,6 +79,14 @@ TARS chatbot version 1/
 ├── Images/             # Project screenshots and assets
 └── main.py             # Application entry point
 ```
+
+## Phase 2 personal memory
+
+Local memory now stores complete conversations and sourced owner facts, with correction, forgetting, relationship inspection and retrieval across models. Read [memory usage and limits](docs/PHASE_2_MEMORY.md). Legacy JSON is snapshotted and imported without rewriting originals. External PostgreSQL/Neo4j deployment and live semantic-quality checks remain pending.
+
+## Phase 1 private setup
+
+Start with [Phase 1 setup](docs/PHASE_1_SETUP.md). The API now requires `OWNER_TOKEN` and browser device pairing. It defaults to loopback access and local-only inference (`ALLOW_CLOUD=false`). Existing run instructions below need these settings. Automated tests use fake models; live provider access must be verified locally.
 
 ## Installation
 

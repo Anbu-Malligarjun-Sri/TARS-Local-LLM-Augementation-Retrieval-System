@@ -6,8 +6,9 @@ Centralizes all configuration for the TARS chatbot system.
 import os
 from pathlib import Path
 from typing import Literal
-from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator
+from urllib.parse import urlparse
 
 
 class TARSConfig(BaseSettings):
@@ -40,6 +41,8 @@ class TARSConfig(BaseSettings):
         description="LM Studio model name"
     )
     
+    lm_studio_reasoning_effort: str | None = None
+
     # Ollama Settings (Local)
     ollama_base_url: str = Field(
         default="http://localhost:11434",
@@ -89,18 +92,30 @@ class TARSConfig(BaseSettings):
     embedding_dimension: int = Field(default=768, ge=1, description="Embedding model output dimension")
     
     # API Settings
-    api_host: str = Field(default="0.0.0.0", description="API host address")
+    api_host: str = Field(default="127.0.0.1", description="API host address")
     api_port: int = Field(default=8000, description="API port")
     max_tokens: int = Field(default=2048, ge=1, description="Maximum generated tokens per response")
     
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
-    
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    memory_backend: Literal["sql", "legacy"] = "sql"
+    memory_db_path: str = str(Path(__file__).resolve().parents[2] / ".runtime" / "memory.sqlite3")
+    memory_database_url: str = ""
+    memory_embeddings: Literal["lexical", "lm_studio"] = "lexical"
+    allow_cloud: bool = False
+    owner_token: str = ""
+    request_timeout: float = Field(default=60, ge=1, le=300)
+
+    @model_validator(mode="after")
+    def validate_private_endpoints(self):
+        if not self.allow_cloud:
+            for endpoint in (self.lm_studio_base_url, self.ollama_base_url):
+                if urlparse(endpoint).hostname not in {"localhost", "127.0.0.1", "::1"}:
+                    raise ValueError("Private mode requires loopback model/embedding endpoints")
+        return self
+
     @property
     def project_root(self) -> Path:
         """Get the project root directory."""

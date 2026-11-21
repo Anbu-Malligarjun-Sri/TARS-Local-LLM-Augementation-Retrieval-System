@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 export function MissionStats() {
   const { totalMessages, totalSessions, messages, status } = useTarsStore();
   const [uptime, setUptime] = useState('00:00:00');
-  const [cpuLoad, setCpuLoad] = useState(12);
+  const cpuLoad = 0;
 
   // Simulated uptime counter
   useEffect(() => {
@@ -23,15 +23,6 @@ export function MissionStats() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Simulated CPU load based on status
-  useEffect(() => {
-    const baseLoad = status === 'thinking' ? 75 : status === 'speaking' ? 45 : 12;
-    const interval = setInterval(() => {
-      setCpuLoad(baseLoad + Math.random() * 10 - 5);
-    }, 500);
-    return () => clearInterval(interval);
-  }, [status]);
 
   const stats = [
     { 
@@ -55,7 +46,7 @@ export function MissionStats() {
     { 
       icon: Cpu, 
       label: 'CPU Load', 
-      value: `${Math.round(cpuLoad)}%`,
+      value: 'Unavailable',
       color: cpuLoad > 60 ? 'text-tars-amber' : 'text-tars-green' 
     },
   ];

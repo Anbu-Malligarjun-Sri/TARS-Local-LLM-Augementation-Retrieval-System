@@ -6,6 +6,24 @@
 // Use environment variable for API URL, fallback to localhost for development
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// Device cookies are HttpOnly; the owner bootstrap token is never persisted.
+async function apiFetch(url: string, options: RequestInit = {}) {
+  return fetch(url, { ...options, credentials: 'include' });
+}
+export async function pairDevice(token: string) {
+  const response = await apiFetch(`${API_BASE}/api/pair`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+  });
+  if (!response.ok) throw new Error('Pairing failed. Check the server token.');
+}
+
+export async function redeemLaunch(token: string) {
+  const response = await apiFetch(`${API_BASE}/api/launch`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+  });
+  if (!response.ok) throw new Error('Launch link expired. Generate a new local launch link.');
+}
+
 // Build WebSocket URL based on API_BASE
 function getWebSocketUrl(): string {
   let wsBase = API_BASE.replace(/\/$/, '');
@@ -24,10 +42,12 @@ function getWebSocketUrl(): string {
 
 // Types
 export interface ChatMessage {
-  type: 'greeting' | 'response' | 'start' | 'chunk' | 'end';
+  type: 'greeting' | 'response' | 'start' | 'chunk' | 'end' | 'error' | 'cancelled';
   content?: string;
   full_response?: string;
   conversation_id?: string;
+  turn_id?: string;
+  sequence?: number;
 }
 
 export interface TarsSettings {
@@ -52,7 +72,7 @@ export interface RagStats {
 export const tarsApi = {
   // Chat endpoints
   async chat(message: string, enhance = true, conversationId?: string): Promise<{ response: string; conversation_id?: string }> {
-    const res = await fetch(`${API_BASE}/api/chat`, {
+    const res = await apiFetch(`${API_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, enhance_response: enhance, stream: false, conversation_id: conversationId }),
@@ -62,20 +82,20 @@ export const tarsApi = {
   },
 
   async getGreeting(): Promise<{ greeting: string }> {
-    const res = await fetch(`${API_BASE}/api/chat/greeting`);
+    const res = await apiFetch(`${API_BASE}/api/chat/greeting`);
     if (!res.ok) throw new Error(`Failed to get greeting: ${res.statusText}`);
     return res.json();
   },
 
   // Settings endpoints
   async getSettings(): Promise<TarsSettings> {
-    const res = await fetch(`${API_BASE}/api/settings`);
+    const res = await apiFetch(`${API_BASE}/api/settings`);
     if (!res.ok) throw new Error(`Failed to get settings: ${res.statusText}`);
     return res.json();
   },
 
   async updateSettings(settings: Partial<TarsSettings>): Promise<TarsSettings> {
-    const res = await fetch(`${API_BASE}/api/settings`, {
+    const res = await apiFetch(`${API_BASE}/api/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
@@ -84,30 +104,36 @@ export const tarsApi = {
     return res.json();
   },
 
+  async getConversations(): Promise<{conversations: {id: string; created_at: string; legacy_id?: string; message_count: number}[]}> {
+    const response = await apiFetch(`${API_BASE}/api/conversations`);
+    if (!response.ok) throw new Error('Unable to load server conversations');
+    return response.json();
+  },
+
   // History endpoints
   async getHistory(conversationId?: string): Promise<{ conversation_id: string; messages: unknown[]; count: number }> {
     const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : '';
-    const res = await fetch(`${API_BASE}/api/history${query}`);
+    const res = await apiFetch(`${API_BASE}/api/history${query}`);
     if (!res.ok) throw new Error(`Failed to get history: ${res.statusText}`);
     return res.json();
   },
 
   async clearHistory(conversationId?: string): Promise<{ message: string; status: string }> {
     const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : '';
-    const res = await fetch(`${API_BASE}/api/history${query}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE}/api/history${query}`, { method: 'DELETE' });
     if (!res.ok) throw new Error(`Failed to clear history: ${res.statusText}`);
     return res.json();
   },
 
   // RAG endpoints
   async getRagStats(): Promise<RagStats> {
-    const res = await fetch(`${API_BASE}/api/rag/stats`);
+    const res = await apiFetch(`${API_BASE}/api/rag/stats`);
     if (!res.ok) throw new Error(`Failed to get RAG stats: ${res.statusText}`);
     return res.json();
   },
 
   async searchRag(query: string, n_results = 5): Promise<{ query: string; results: unknown }> {
-    const res = await fetch(`${API_BASE}/api/rag/search?query=${encodeURIComponent(query)}&n_results=${n_results}`, {
+    const res = await apiFetch(`${API_BASE}/api/rag/search?query=${encodeURIComponent(query)}&n_results=${n_results}`, {
       method: 'POST',
     });
     if (!res.ok) throw new Error(`RAG search failed: ${res.statusText}`);
@@ -116,7 +142,7 @@ export const tarsApi = {
 
   // Health check
   async health(): Promise<{ status: string; llm_provider: string; rag_enabled: boolean; voice_enabled: boolean }> {
-    const res = await fetch(`${API_BASE}/health`);
+    const res = await apiFetch(`${API_BASE}/health`);
     if (!res.ok) throw new Error(`Health check failed: ${res.statusText}`);
     return res.json();
   },
@@ -125,6 +151,8 @@ export const tarsApi = {
 // WebSocket connection manager
 export class TarsWebSocket {
   private ws: WebSocket | null = null;
+  private closed = false;
+  private timer: ReturnType<typeof setTimeout> | undefined;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
@@ -137,6 +165,7 @@ export class TarsWebSocket {
   ) {}
 
   connect(): void {
+    if (this.closed) return;
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     try {
@@ -172,9 +201,9 @@ export class TarsWebSocket {
   }
 
   private attemptReconnect(): void {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+    if (!this.closed && this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
+      this.timer = setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
     }
   }
 
@@ -187,6 +216,8 @@ export class TarsWebSocket {
   }
 
   disconnect(): void {
+    this.closed = true;
+    clearTimeout(this.timer);
     if (this.ws) {
       this.ws.close();
       this.ws = null;
