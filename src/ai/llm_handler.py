@@ -106,9 +106,16 @@ class OpenAIHandler(BaseLLMHandler):
             stream=True,
             **request_options,
         )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        try:
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        finally:
+            # Cancellation closes the response once the in-flight read drains.
+            # Do not leave the provider HTTP stream open after generator.close().
+            close = getattr(stream, "close", None)
+            if close is not None:
+                close()
 
 
 class LMStudioHandler(OpenAIHandler):

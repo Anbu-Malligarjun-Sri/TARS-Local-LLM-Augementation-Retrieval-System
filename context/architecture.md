@@ -10,11 +10,11 @@ Updated 2026-11-21. Distinguish CURRENT from TARGET. Detailed rationale and audi
 | Backend | FastAPI authenticated channels, per-session locks and bounded generation offload | Modular application; async or bounded offload; authenticated channels |
 | Models | LM Studio, Ollama, OpenAI, legacy Gemini; failure fallback | Capability/privacy/budget router and versioned adapters |
 | Memory | Transactional SQL conversations/claims and local relationship/vector projections; Chroma YAML Q&A remains separate | PostgreSQL canonical events/claims + Neo4j relationship projection + pgvector retrieval |
-| Personality | Shared prompt and random formatting | Versioned persona/examples and deterministic audience policy |
-| Voice | Google recognition + pyttsx3 CLI loop | Streaming STT/runtime/TTS; optional native audio adapter |
-| Jobs | None | Durable Postgres jobs/outbox with worker leases |
+| Personality | Versioned per-turn audience policy/examples; isolated previews; output preserved | Versioned persona/examples and deterministic audience policy |
+| Voice | Opt-in Web Speech recognition/local sentence playback; legacy CLI remains | Streaming STT/runtime/TTS; optional native audio adapter |
+| Jobs | Durable SQL coding queue, leases/cancellation/artifacts | Durable Postgres jobs/outbox with worker leases |
 | Phone | None | One selected carrier/media path, candidate LiveKit/SIP or Twilio Streams |
-| Coding | None | Isolated Codex/Claude workers under scoped job contracts |
+| Coding | Codex cloud CLI adapter; live sandbox provisioning blocked | Isolated Codex/Claude workers under scoped job contracts |
 
 ## System boundaries
 
@@ -92,3 +92,10 @@ No model/source text can grant permission, approve an action or select arbitrary
 `src/jobs/` supplies canonical durable approval/queue/event state, filtered independent source snapshots, artifacts and a separate leased worker. `src/agents/codex.py` adapts the installed Codex cloud CLI behind a mandatory native sandbox probe. `src/interfaces/jobs_api.py` exposes authenticated preparation/review/approve/cancel/evidence APIs. Approval is separate from chat routing and binds the exact selected source, objective, provider and limits. Source Git objects/history and runtime/private data are not copied. Named acceptance profiles run in the same restrictive sandbox; no automatic patch application exists.
 
 The owner selected Codex cloud per approved job. Local queue/API/UI tests pass; live execution is blocked because Windows app runtime sandbox provisioning is unavailable, including after installing the standalone official CLI/daemon. Jobs fail closed before cloud calls. Token limits use observed usage, not a hard monetary cap. See `docs/PHASE_4_CODING.md`. Earlier future-scope wording above describes the Phase 3 checkpoint; Phase 4 supersedes its coding-queue status.
+
+
+## Phase 5 implementation and acoustic acceptance gate
+
+`src/personality/policy.py` composes versioned per-turn expression without mutating shared provider settings. Strict audience preview history isolation is checked before memory/tools/RAG; owner policy is unchanged. Legacy honesty is directness, factual honesty invariant. Random output decoration and frontend arbitrary gesture stripping are removed.
+
+The browser uses authenticated SSE with chosen turn UUIDs, abortable readers and exact message updates. Server cancellation yields promptly even during blocked synchronous reads, retaining per-conversation locks/capacity until safe drain. `frontend/src/services/voice.ts` and `useBrowserVoice.ts` adapt opt-in browser recognition and local-only sentence synthesis. Tamil/English, editable transcripts, bounded capture/playback, push-to-talk interruption and page-local measured timings are implemented. Recognition can be vendor-backed with separate explicit consent; this is not offline/full-duplex acoustic voice. Actual speech availability/quality/latency remain owner-browser gates. See `docs/PHASE_5_VOICE.md`.

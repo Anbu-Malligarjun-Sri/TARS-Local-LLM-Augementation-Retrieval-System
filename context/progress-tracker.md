@@ -4,7 +4,7 @@ Last updated: 2026-11-21 (Asia/Calcutta).
 
 ## Current phase
 
-Phase 4 units 12–13 local implementation delivered: durable approved coding queue, filtered snapshots, Codex cloud adapter and review UI. Live execution acceptance remains BLOCKED by the Windows Codex sandbox provisioning service; no live cloud coding success is claimed. Phases 1–3 remain available. External database/quality gates and personal ICS import remain pending.
+Phase 5 units 14–15 local implementation delivered: versioned audience persona, isolated tone previews, opt-in Tamil/English browser recognition, sentence-level local speech and a rectangular Stop control. Real microphone/acoustic/code-switching acceptance remains pending. Phase 4 live coding execution remains blocked by sandbox provisioning; earlier external database/quality gates remain open.
 
 ## Current goal
 
@@ -32,11 +32,11 @@ Live model, microphone, carrier, training and deployment behavior was not exerci
 
 ## In progress
 
-Phase 4 live sandbox/cloud integration remains open. The official standalone CLI and local daemon were installed; the native probe still reports app runtime provisioning service unavailable and refuses helper fallback. Execution stops before cloud disclosure. Repair the supported runtime, rerun canaries, then approve a small synthetic live job. Do not weaken sandbox policy.
+Phase 5 owner-browser acceptance: actual recognition availability, microphone permission, Tamil/English names/noise/code-switching accuracy, installed local voices and measured acoustic latency. No audio was recorded or sent to a vendor during development tests. Codex sandbox/runtime provisioning remains an independent Phase 4 blocker.
 
 ## Next up
 
-Refresh TARS at localhost:8081 and open Coding jobs. Local snapshot preparation, source review and approval/cancel are available; readiness exposes the execution blocker. See `docs/PHASE_4_CODING.md`. Finish the live Phase 4 gate before claiming operational coding delegation. Phase 5 audience persona/voice remains planned.
+Refresh localhost:8081. Test Stop before the first token and mid-response. Open Voice settings, select Tamil/English, review speech-provider consent and start the microphone explicitly. Inspect/correct the final transcript before Send, or opt into automatic final-transcript send. Use audience previews in separate sessions. See `docs/PHASE_5_VOICE.md`; collect real voice timing/accuracy evidence before phone deployment. Phase 6 is not started.
 
 ## Open questions
 
@@ -134,3 +134,19 @@ Live WebSocket verification also passed: first text arrived in 11.4 seconds and 
 - Live blocker: bundled CLI 0.171.0-alpha.13 and official npm CLI 0.171.0 both fail native sandbox provisioning. Installed/started official local daemon; probe still returns `app runtime provisioning service is unavailable; refusing helper fallback`. No live cloud coding or live sandboxed test pass claimed. No source was sent in generated canary probes.
 - Runtime cloud coding opt-in follows owner selection; provider login remains managed by official Codex. Private runtime files/installations/logs stay ignored. Created an online canonical-memory backup before activating the backend/worker. Verified live authenticated snapshot preparation/source inspection/cancellation without cloud approval, and confirmed all original conversation JSON hashes remain unchanged. Services are running locally.
 - Next: repair supported Codex desktop/runtime provisioning; rerun readiness canaries and an explicitly approved synthetic live job. Phase 4 operational acceptance remains open.
+
+
+## Phase 5 session — 2026-11-21
+
+- Owner requested Phase 5 plus Stop in the rectangular input action and selected Tamil and English. Added `05-persona-voice.md` before implementation. Initial voice language is Tamil (India), English (India) selectable; code-switching quality depends on the browser service.
+- Added portable `tars-persona-1` policy and reviewed style examples, strict per-turn audience/playful/language settings, sensitive/technical humor suppression and truthful identity. Parent/professional/unknown modes are neutral/respectful; friend sarcasm needs explicit consent. Honesty remains invariant; legacy honesty means directness.
+- Non-owner preview sessions have no personal memory/RAG/tools and cannot reuse owner/other-audience transcripts. Owner memory/routing policy is unchanged. Preview history carries audience metadata and restores the audience label. Contact authentication/overrides remain future work.
+- Removed random model-output decoration and fictional identity claims; Markdown no longer removes arbitrary emphasized/code text as gestures.
+- Replaced browser chat with authenticated cancellable SSE and known turn IDs. Send becomes rectangular STOP while thinking/streaming; partial text is retained and late events ignored. Backend cancellation acknowledges before blocked provider reads complete, retaining capacity/locks during safe cooperative drain. Pre-start Stop and reused IDs are handled.
+- Added opt-in Web Speech single-utterance capture, live partials, editable final transcripts (automatic send optional), local-only sentence playback, bounded capture/queues/timeouts and explicit interrupt-and-listen. Stop/mute/session/language/consent/teardown clear audio; no automatic microphone restart. Browser-vendor STT disclosure is separate from local LLM routing. TARS stores sent transcripts, no raw audio.
+- Page-local bounded timing samples show counts, median/p95 for text, utterance start, available speech finalization and local stop dispatch. No fake metrics; acoustic silence and provider shutdown are not inferred from dispatch. Unsupported speech or absent local voices keep text available.
+- Verification: 80 backend tests and 19 frontend tests pass; typecheck, lint (7 existing warnings) and production build pass. Coverage includes 12 held-out policy cases, privacy/history/tool isolation, blocked-call/pre-start cancellation, split Tamil UTF-8 SSE, rectangular Stop/late-event behavior, Tamil transcript review/playback, speech consent/errors/timeouts and queue cleanup. Browser speech is mocked in tests.
+- Local Qwen smoke evaluation used three synthetic previews in isolated SQL storage. First pass exposed an invented log-access aside and Tamil placeholder; strengthened reviewed prompts and repeated all cases. Final parent/friend/professional-Tamil replies were appropriate in these three samples. First-text median 7,974 ms / p95 14,993 ms, n=3; not a microphone latency or comprehensive style benchmark.
+- Live authenticated cancellation before first token yielded start/cancelled and acknowledged in 32 ms (one smoke sample). Provider drained; only the synthetic probe turn was removed and original conversation JSON hashes were unchanged. Provider HTTP streams now explicitly close on generator cleanup.
+- Created online memory/foundation backups before restarting the local backend; frontend remains running. Real microphone, speech vendor and acoustic playback were not activated by development tooling. No phone calls, new speech accounts, model training or source publication.
+- Operational acceptance remains open for actual owner-browser recognition/voices and Tamil/English acoustic/accuracy/latency evaluation. Phase 4 provisioning blocker remains open.

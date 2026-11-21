@@ -68,3 +68,8 @@ Governed public web research, projects/tasks and the selected local ICS read-onl
 ## Phase 4 delivery and limitation
 
 Approved durable coding jobs, filtered isolated source snapshots, first Codex cloud adapter and diff/check review UI are implemented. The owner chose Codex cloud with explicit job approval; personal chat/memory stay under their existing local policy. Actual coding execution is blocked by Windows Codex sandbox provisioning and fails before cloud source disclosure. Local tests are not proof of live Codex integration. See `docs/PHASE_4_CODING.md`; persona/voice/phone work remains future scope.
+
+
+## Phase 5 delivery and limits
+
+Audience persona previews, opt-in Tamil/English browser speech, local sentence playback and rectangular Stop are implemented. Sent speech uses the same owner chat/memory path; previews have no private owner context/tools. Browser recognition may use a vendor service with separate explicit consent. Real microphone/voice availability, mixed-language accuracy and acoustic latency remain unverified acceptance gates; no carrier/phone integration is claimed. See `docs/PHASE_5_VOICE.md`.

@@ -61,3 +61,8 @@ Register a strict Pydantic argument schema, write/private flags and handler for 
 ## Coding worker conventions
 
 Require owner-bound snapshot/contract approval before queueing cloud work. Keep independent filtered Git metadata, never shared original Git objects/private history. Disable user hooks/config/extra tools and filter subprocess environments. Probe native read/write/network restrictions; fail closed. Execute named acceptance profiles in that same sandbox. Bound deadlines/output, terminate process trees, lease/heartbeat durable jobs and require newly approved attempts after interruption. Distinguish observed token accounting from spending enforcement and mocked adapter tests from live coding evidence. Never auto-apply patches to source.
+
+
+## Persona and speech conventions
+
+Compose style per turn; do not mutate global provider prompts for different audiences. Bind audience to user-message metadata and reject cross-audience history reuse; style is not authentication or a privacy grant. Preserve generated code/Markdown/citations exactly. Require non-persistent explicit browser speech disclosure before recording and localService voices for playback. Never auto-start/restart capture; clear callbacks/queues on Stop/mute/consent/session/teardown. Treat final transcripts as editable drafts unless auto-send is explicitly selected. Report observed sample counts/median/p95 and distinguish API dispatch from acoustic/provider shutdown. Keep capacity/locks until cancelled SDK reads drain; never close an executing generator.

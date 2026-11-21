@@ -4,7 +4,7 @@
 
 # TARS Chatbot
 
-Phase 4 adds reviewed coding jobs in the sidebar. See [coding setup and current runtime limitation](docs/PHASE_4_CODING.md): local preparation/review works; live Codex execution awaits sandbox provisioning repair.
+Phase 5 adds audience previews, Tamil/English browser voice and a rectangular Stop control. See [voice setup and acceptance limits](docs/PHASE_5_VOICE.md). [Phase 4 coding jobs](docs/PHASE_4_CODING.md) remain blocked at live sandbox provisioning.
 
 > **Personal intelligence roadmap (2026-11-21):** Read the [codebase assessment and phased architecture plan](docs/TARS_ARCHITECTURE_PLAN.md) for the migration toward shared graph memory, model-independent personality, coding assistance, voice and phone handling. The six project context files start at [project overview](context/project-overview.md); actual implementation status is in the [progress tracker](context/progress-tracker.md). The feature descriptions below describe the legacy project and should be read alongside the audit's capability limitations.
 

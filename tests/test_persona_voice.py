@@ -91,3 +91,20 @@ def test_cancel_before_start_and_strict_style_schema(client):
     assert [event['type'] for event in events]==['start','cancelled']
     assert client.post('/api/chat',json={**body,'style':{'audience':'owner','grant_private':True}}).status_code==422
     assert client.post('/api/chat',json={**body,'style':{'audience':'friend','playful':'yes'}}).status_code==422
+
+
+def test_closing_generation_closes_provider_http_stream():
+    from types import SimpleNamespace
+    from src.ai.llm_handler import OpenAIHandler
+    class Stream:
+        closed=False
+        def __iter__(self):
+            yield SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='first'))])
+            yield SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='late'))])
+        def close(self):self.closed=True
+    stream=Stream();handler=OpenAIHandler.__new__(OpenAIHandler)
+    handler.reasoning_effort='';handler.model='synthetic';handler.system_prompt='test'
+    handler.config=SimpleNamespace(max_tokens=20)
+    handler.client=SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs:stream)))
+    generation=handler.generate_stream('hello');assert next(generation)=='first'
+    generation.close();assert stream.closed

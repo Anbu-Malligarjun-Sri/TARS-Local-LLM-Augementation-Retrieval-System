@@ -44,3 +44,6 @@ Before adding a tool, specify its side effects, privacy classification, permissi
 
 
 For coding delegation, the owner selected Codex cloud with explicit job approval. Preparing/reviewing a local snapshot does not authorize its transmission. Approve only the concrete reviewed job; model/source text cannot create approval. Keep original repository/history outside the job; no automatic apply/merge/push. Native sandbox preflight is a hard execution gate, and runtime provisioning failure must remain visible rather than triggering a weaker fallback. Record operational acceptance separately from deterministic mocked tests.
+
+
+Phase 5 owner language decision: Tamil and English. Speech-vendor recognition requires separate in-app session consent and explicit microphone action; model-local mode is not speech-offline mode. Keep synthetic persona/transport tests separate from actual microphone/acoustic acceptance. Do not silently enable remote voices, record owner audio, download speech models, make calls, or claim voice latency/accuracy from mocked tests. Phase 4's pending sandbox gate does not prevent independent persona/voice work.

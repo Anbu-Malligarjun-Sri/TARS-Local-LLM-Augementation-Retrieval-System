@@ -43,7 +43,7 @@ Reuse Radix/shadcn primitives in `frontend/src/components/ui/`, Lucide React ico
 
 ## Truthful states
 
-Replace fixed RAG “SYNCED”, LLM “ACTIVE”, simulated CPU, hard-coded confidence and “DATA ARCHIVES” labels with measured data or unavailable states. Disable mic until a real audio capability exists. Settings without backend semantics must be disabled or clearly labeled unavailable. A source label means traceable evidence; it is not decoration.
+Replace fixed RAG “SYNCED”, LLM “ACTIVE”, simulated CPU, hard-coded confidence and “DATA ARCHIVES” labels with measured data or unavailable states. Offer microphone capture only through supported speech APIs, explicit disclosure/permission and a user start action. Settings without backend semantics must be disabled or clearly labeled unavailable. A source label means traceable evidence; it is not decoration.
 
 Approval UI shows the concrete action, target, relevant content/diff and scope. A broad “trust” slider cannot grant permission. Disclose cloud routing and missing/degraded capabilities in user language. Preserve useful personality without sarcastic errors that obscure recovery steps.
 
@@ -60,3 +60,8 @@ Tools & projects opens a dialog with Projects, Research, Calendar, Permissions a
 ## Implemented coding review surface
 
 Coding jobs opens a dialog for repository alias, objective, selected paths, verification profiles, deadline and observed token budget. Prepare creates a local snapshot; file previews and cloud disclosure consent precede the separate Approve and queue action. Job history, cancellation, truthful failure/check states, patch download and agent/sandbox evidence are available. Readiness displays actual probe output; on this host sandbox provisioning currently blocks execution. No automatic source application or cloud success badge exists.
+
+
+## Implemented Phase 5 surfaces
+
+The send rectangle becomes a labeled amber STOP during thinking/streaming, capture or playback. It stops local audio/display and requests server cancellation. Voice settings includes Tamil/English language, local voice, non-persistent speech-provider consent, default transcript review, optional automatic final send, partial/error/status output, interrupt-and-listen and bounded measured timing statistics. No automatic recording or remote TTS fallback. The command palette opens settings, not the microphone. Audience selector creates separate owner/parent/friend/professional/unknown previews; friend playful consent is explicit. Preview label discloses no owner context/tools. Directness and Restraint sliders do not change truthfulness/access rules.
