@@ -75,6 +75,9 @@ def bounded(argv,cwd,env,timeout,cancel=lambda:None,input_text='',on_line=None,m
             if done and process.poll() is not None:break
         if pending and on_line:on_line(pending.decode('utf-8',errors='replace'))
         return {'exit_code':process.wait(timeout=3),'output':output.decode('utf-8',errors='replace'),'seconds':round(time.monotonic()-start,2)}
+    except ProcessLimit as exc:
+        exc.output=output.decode('utf-8',errors='replace')[-2000000:]
+        raise
     finally:
         stop.set();tree.close()
         try:process.wait(timeout=3)

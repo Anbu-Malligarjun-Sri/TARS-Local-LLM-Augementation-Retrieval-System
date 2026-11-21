@@ -104,6 +104,8 @@ class TARSConfig(BaseSettings):
     memory_db_path: str = str(Path(__file__).resolve().parents[2] / ".runtime" / "memory.sqlite3")
     memory_database_url: str = ""
     memory_embeddings: Literal["lexical", "lm_studio"] = "lexical"
+    coding_allow_cloud: bool = False
+    coding_repositories: dict[str,str] = {}
     allow_cloud: bool = False
     owner_token: str = ""
     request_timeout: float = Field(default=60, ge=1, le=300)

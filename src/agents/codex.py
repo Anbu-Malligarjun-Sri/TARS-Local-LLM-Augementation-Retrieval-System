@@ -47,7 +47,7 @@ print('INSIDE_OK')'''
         argv=[self.executable,'exec','--ignore-user-config','--ignore-rules','--ephemeral','--skip-git-repo-check','--json','--color','never','-C',str(workspace),
               '-c','default_permissions="tars-job"',*self.policy(workspace),'-c','approval_policy="never"',
               '-c','features.hooks=false','-c','features.apps=false','-c','features.computer_use=false','-c','features.browser_use=false',
-              '-c','web_search="disabled"','-c','shell_environment_policy.inherit="none"','-o',str(artifacts/'agent-final.txt')]
+              '-c','features.code_mode_host=false','-c','features.code_mode=false','-c','mcp_servers={}','-c','web_search="disabled"','-c','shell_environment_policy.inherit="none"','-o',str(artifacts/'agent-final.txt')]
         if self.model:argv+=['-m',self.model]
         argv+=['-']
         spec=job['spec'];usage={};event_count=0

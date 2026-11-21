@@ -469,6 +469,8 @@ from src.interfaces.memory_api import router as memory_router
 app.include_router(memory_router)
 from src.interfaces.tools_api import router as tools_router
 app.include_router(tools_router)
+from src.interfaces.jobs_api import router as jobs_router
+app.include_router(jobs_router)
 
 @app.get("/api/conversations")
 async def list_conversations():
