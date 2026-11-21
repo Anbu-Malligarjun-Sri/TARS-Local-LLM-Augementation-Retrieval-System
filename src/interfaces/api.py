@@ -6,7 +6,8 @@ REST API for interacting with TARS chatbot.
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from src.personality.policy import Style
 from typing import Optional, List
 import asyncio
 import json
@@ -38,6 +39,9 @@ logger = logging.getLogger("tars.api")
 
 # Pydantic models for request/response
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    style: Style = Field(default_factory=Style)
+    turn_id: UUID | None = None
     message: str = Field(..., min_length=1, max_length=16000, description="User message to send to TARS")
     enhance_response: bool = Field(True, description="Whether to add personality enhancements")
     stream: bool = Field(False, description="Whether to stream the response")
@@ -204,88 +208,124 @@ async def unpair(request: Request, response: Response):
     response.delete_cookie("tars_device")
     return {"status": "unpaired"}
 
-async def events(message, conversation_id, turn_id):
-    if len(_active) >= 4:
+_pending_cancels = {}
+_draining = set()
+
+async def events(message, conversation_id, turn_id, style=None):
+    if len(_active) >= 4 or turn_id in _active:
         yield {"schema_version": 1, "type": "error", "turn_id": turn_id, "conversation_id": conversation_id,
-               "content": "Generation capacity reached; retry shortly."}
+               "content": "Generation capacity reached or turn already active; retry shortly."}
         return
     sequence = 0
-    cancelled = asyncio.Event()
-    _active[turn_id] = cancelled
+    cancelled = threading.Event()
     def event(kind, **payload):
         nonlocal sequence
         sequence += 1
         return dict(schema_version=1, type=kind, conversation_id=conversation_id,
-                    turn_id=turn_id, message_id=turn_id, sequence=sequence, timestamp=datetime.now(timezone.utc).isoformat(), **payload)
-    with connect() as db:
-        db.execute("INSERT INTO turns VALUES (?,?,?,?)", (turn_id, conversation_id, "running", None))
-    state = "error"
-    full = ""
-    iterator = None
+                    turn_id=turn_id, message_id=turn_id, sequence=sequence,
+                    timestamp=datetime.now(timezone.utc).isoformat(), **payload)
+    try:
+        with connect() as db:
+            db.execute("INSERT INTO turns VALUES (?,?,?,?)", (turn_id, conversation_id, "running", None))
+    except Exception:
+        yield event("error", content="Turn ID already used or turn storage unavailable; submit a new turn.")
+        return
+    _active[turn_id] = cancelled
+    if _pending_cancels.pop(turn_id, 0) > time.monotonic():cancelled.set()
+    state = "error";full = "";iterator = None;pending = None
+    lock = _locks.setdefault(conversation_id, asyncio.Lock());acquired = False
+    lock_task = None
+    async def cleanup():
+        try:
+            if pending is not None:
+                try:await asyncio.shield(pending)
+                except (Exception, asyncio.CancelledError):pass
+            if iterator is not None:
+                try:await asyncio.to_thread(iterator.close)
+                except (ValueError, RuntimeError):pass
+            if state != "completed" and full:
+                await asyncio.to_thread(get_engine().memory.add_message, "assistant", full,
+                    conversation_id=conversation_id, metadata={"turn_id": turn_id, "state": state})
+        finally:
+            if acquired:lock.release()
+            _active.pop(turn_id, None)
+            with connect() as db:db.execute("UPDATE turns SET state=? WHERE id=?", (state, turn_id))
     try:
         yield event("start")
-        async with _locks.setdefault(conversation_id, asyncio.Lock()):
-            engine = await asyncio.to_thread(get_engine)
-            iterator = iter(engine.chat_stream(message, conversation_id=conversation_id))
-            full = ""
-            deadline = time.monotonic() + get_config().request_timeout
-            sentinel = object()
-            while True:
+        lock_task = asyncio.create_task(lock.acquire())
+        deadline = time.monotonic() + get_config().request_timeout
+        while not lock_task.done():
+            if cancelled.is_set():
+                state = "cancelled";yield event(state);return
+            if time.monotonic() > deadline:raise TimeoutError()
+            await asyncio.wait({lock_task}, timeout=.025)
+        acquired = await lock_task
+        engine = await asyncio.to_thread(get_engine)
+        iterator = iter(engine.chat_stream(message, conversation_id=conversation_id,
+                                           style=style or Style(), cancel_event=cancelled))
+        sentinel = object()
+        while True:
+            if cancelled.is_set():
+                state = "cancelled";yield event(state);return
+            if time.monotonic() > deadline:raise TimeoutError()
+            pending = asyncio.get_running_loop().run_in_executor(_executor, next, iterator, sentinel)
+            while not pending.done():
                 if cancelled.is_set():
-                    state = "cancelled"
-                    yield event(state)
-                    break
-                if time.monotonic() > deadline:
-                    raise TimeoutError("Turn deadline exceeded")
-                chunk = await asyncio.get_running_loop().run_in_executor(_executor, next, iterator, sentinel)
-                if cancelled.is_set():
-                    state = "cancelled"
-                    yield event(state)
-                    break
-                if chunk is sentinel:
-                    state = "completed"
-                    yield event("end", full_response=full)
-                    break
-                full += chunk
-                yield event("chunk", content=chunk)
+                    state = "cancelled";yield event(state);return
+                if time.monotonic() > deadline:raise TimeoutError()
+                await asyncio.wait({pending}, timeout=.025)
+            if cancelled.is_set():
+                state = "cancelled";yield event(state);return
+            chunk = pending.result();pending = None
+            if cancelled.is_set():
+                state = "cancelled";yield event(state);return
+            if chunk is sentinel:
+                state = "completed";yield event("end", full_response=full);return
+            full += chunk
+            yield event("chunk", content=chunk)
     except asyncio.CancelledError:
-        state = "cancelled"
-        raise
+        state = "cancelled";cancelled.set();raise
     except Exception:
+        cancelled.set()
         logger.exception("Turn failed: %s", turn_id)
-        yield event("error", content="Generation failed. You can retry this turn.")
+        yield event("error", content="Generation failed. Check the audience/conversation selection or retry.")
     finally:
-        if iterator is not None:
-            # next() has finished before closing the suspended generator.
-            try:
-                iterator.close()
-            except (ValueError, RuntimeError):
-                pass
-        if state != "completed" and full:
-            get_engine().memory.add_message("assistant", full, conversation_id=conversation_id,
-                                            metadata={"turn_id": turn_id, "state": state})
-        _active.pop(turn_id, None)
-        with connect() as db:
-            db.execute("UPDATE turns SET state=? WHERE id=?", (state, turn_id))
+        cancelled.set()
+        if lock_task is not None and not acquired:
+            if not lock_task.done():lock_task.cancel()
+            else:
+                try:
+                    if lock_task.result():acquired = True
+                except asyncio.CancelledError:pass
+        # Keep the lease/capacity and conversation lock until the SDK next()
+        # returns; never close a generator executing in another thread.
+        task = asyncio.create_task(cleanup());_draining.add(task)
+        task.add_done_callback(_draining.discard)
+        if pending is None or pending.done():await asyncio.shield(task)
 
 @app.post("/api/turns/{turn_id}/cancel")
 async def cancel_turn(turn_id: UUID):
-    flag = _active.get(str(turn_id))
+    key = str(turn_id);flag = _active.get(key)
     if flag:
         flag.set()
-    return {"status": "cancellation_requested" if flag else "not_active"}
+    else:
+        now = time.monotonic()
+        for expired in [k for k,v in _pending_cancels.items() if v < now]:_pending_cancels.pop(expired, None)
+        if len(_pending_cancels) >= 256:_pending_cancels.pop(next(iter(_pending_cancels)))
+        _pending_cancels[key] = now + 60
+    return {"status": "cancellation_requested"}
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     conversation_id = str(request.conversation_id)
-    turn_id = str(uuid4())
+    turn_id = str(request.turn_id or uuid4())
     if request.stream:
         async def stream():
-            async for item in events(request.message, conversation_id, turn_id):
+            async for item in events(request.message, conversation_id, turn_id, request.style):
                 yield "data: " + json.dumps(item) + "\n\n"
         return StreamingResponse(stream(), media_type="text/event-stream")
     result = ""
-    async for item in events(request.message, conversation_id, turn_id):
+    async for item in events(request.message, conversation_id, turn_id, request.style):
         if item["type"] == "chunk":
             result += item["content"]
         if item["type"] == "error":
@@ -319,7 +359,7 @@ async def websocket_chat(websocket: WebSocket):
             except ValidationError:
                 await websocket.send_json({"type": "error", "content": "Invalid chat request"})
                 continue
-            async for item in events(request.message, str(request.conversation_id), str(uuid4())):
+            async for item in events(request.message, str(request.conversation_id), str(request.turn_id or uuid4()), request.style):
                 await websocket.send_json(item)
     except WebSocketDisconnect:
         pass
@@ -379,10 +419,13 @@ async def get_history(conversation_id: UUID):
     engine = await asyncio.to_thread(get_engine)
     selected_id = str(conversation_id) if conversation_id else None
     history = engine.get_conversation_history(selected_id)
+    conversation = engine.memory.get_conversation(selected_id)
+    audience = next((m.metadata.get("audience", "owner") for m in conversation.messages if m.role == "user"), "owner") if conversation else "owner"
     
     return {
         "conversation_id": selected_id or engine.memory.active_conversation_id,
         "messages": history,
+        "audience": audience,
         "count": len(history)
     }
 

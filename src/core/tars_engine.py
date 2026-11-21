@@ -6,6 +6,7 @@ The heart of TARS - integrates all components for a cohesive experience.
 import re
 import logging
 from typing import Generator
+from ..personality.policy import Style, instructions
 
 from ..ai.llm_handler import get_llm_handler, MultiProviderLLM, BaseLLMHandler
 from ..ai.rag_system import RAGSystem, get_rag_system, is_rag_available
@@ -70,7 +71,11 @@ class TARSEngine:
         self,
         user_input: str,
         conversation_id: str | None = None,
+        style: Style | None = None,
     ) -> tuple[str, list[dict]]:
+        style = style or Style()
+        self._check_audience(conversation_id, style)
+        raw_input = user_input
         repository = getattr(self.memory, "repository", None)
         if repository is not None and self.config.allow_cloud:
             # A session used with local-only context cannot later disclose that
@@ -79,7 +84,7 @@ class TARSEngine:
             if prior and any(m.metadata.get("local_only_context") for m in prior.messages):
                 raise PermissionError("This conversation contains local-only memory; use local routing or start a new conversation")
         self.memory.add_message("user", user_input, conversation_id=conversation_id,
-                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud})
+                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud, "audience": style.audience})
         history = self.memory.get_history(
             conversation_id=conversation_id,
             max_messages=20,
@@ -87,13 +92,13 @@ class TARSEngine:
         history = history[:-1] if history else []
 
         repository = getattr(self.memory, "repository", None)
-        if repository is not None:
+        if repository is not None and style.audience == "owner":
             # Conservatively omit local-only memories whenever cloud fallback is eligible.
             personal = repository.context(self.memory.owner, user_input, cloud=self.config.allow_cloud)
             if personal:
                 user_input = personal + "\n\nCurrent user request: " + user_input
 
-        if self.use_rag and self.rag_system:
+        if self.use_rag and self.rag_system and style.audience == "owner":
             try:
                 rag_context = self.rag_system.retrieve(user_input, n_results=3)
             except Exception as exc:
@@ -108,13 +113,14 @@ class TARSEngine:
                     f"User question: {user_input}"
                 )
 
-        return user_input, history
+        return instructions(raw_input, style, self.config.tars_humor_level, self.config.tars_honesty_level) + "\nRequest and reference data:\n" + user_input, history
 
     def chat(
         self,
         user_input: str,
         enhance_response: bool = True,
         conversation_id: str | None = None,
+        style: Style | None = None,
     ) -> str:
         """
         Process user input and generate a TARS response.
@@ -126,6 +132,8 @@ class TARSEngine:
         Returns:
             TARS' response
         """
+        style = style or Style()
+        self._check_audience(conversation_id, style)
         user_input = user_input.strip()
         
         if not user_input:
@@ -134,15 +142,15 @@ class TARSEngine:
         # Only explicit owner read intents can invoke Phase 3 tools. Source/model
         # output is never parsed as a tool request or an approval.
         from ..tools.chat import answer as tool_answer
-        special_response = tool_answer(self, user_input, conversation_id)
-        if special_response is None:
+        special_response = tool_answer(self, user_input, conversation_id) if style.audience == "owner" else None
+        if special_response is None and style.audience == "owner":
             special_response = self._handle_special_commands(user_input)
         if special_response:
             self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             self.memory.add_message("assistant", special_response, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             return special_response
         
-        prompt, history = self._prepare_turn(user_input, conversation_id)
+        prompt, history = self._prepare_turn(user_input, conversation_id, style)
         response = self.llm.generate(prompt, history)
         
         # Enhance response with personality
@@ -158,6 +166,8 @@ class TARSEngine:
         self,
         user_input: str,
         conversation_id: str | None = None,
+        style: Style | None = None,
+        cancel_event=None,
     ) -> Generator[str, None, None]:
         """
         Generate a streaming response.
@@ -168,6 +178,9 @@ class TARSEngine:
         Yields:
             Response chunks
         """
+        if cancel_event and cancel_event.is_set():return
+        style = style or Style()
+        self._check_audience(conversation_id, style)
         user_input = user_input.strip()
         
         if not user_input:
@@ -177,8 +190,8 @@ class TARSEngine:
         # Only explicit owner read intents can invoke Phase 3 tools. Source/model
         # output is never parsed as a tool request or an approval.
         from ..tools.chat import answer as tool_answer
-        special_response = tool_answer(self, user_input, conversation_id)
-        if special_response is None:
+        special_response = tool_answer(self, user_input, conversation_id) if style.audience == "owner" else None
+        if special_response is None and style.audience == "owner":
             special_response = self._handle_special_commands(user_input)
         if special_response:
             self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
@@ -186,20 +199,17 @@ class TARSEngine:
             yield special_response
             return
         
-        prompt, history = self._prepare_turn(user_input, conversation_id)
+        prompt, history = self._prepare_turn(user_input, conversation_id, style)
 
         # Generate streaming response
         full_response = ""
         for chunk in self.llm.generate_stream(prompt, history):
+            if cancel_event and cancel_event.is_set():return
             full_response += chunk
             yield chunk
         
-        # Add cue light at the end sometimes
-        cue_light = self.personality.cue_light.maybe_add(probability=0.1)
-        if cue_light:
-            yield cue_light
-            full_response += cue_light
-        
+        if cancel_event and cancel_event.is_set():return
+
         # Store the full response
         self.memory.add_message("assistant", full_response, conversation_id=conversation_id)
     
@@ -241,15 +251,15 @@ class TARSEngine:
     
     def _get_identity_response(self) -> str:
         """Generate an identity response."""
-        responses = [
-            "I'm TARS, ex-Marine Corps robot turned space comedian and AI assistant. Humor's at 60%, sarcasm's at 100%. What can I do for you?",
-            "Name's TARS. I'd flash my cue light, but you can't see it from here. I'm your sarcastic AI companion, ready for anything.",
-            "I'm TARS—built by NASA, optimized for snark. I can navigate wormholes, analyze quantum data, and crack jokes. Not necessarily in that order.",
-            "TARS here. AI robot, mission specialist, and self-appointed comedian. My creators gave me a personality, and humanity's been questioning that choice ever since.",
-        ]
-        import random
-        return random.choice(responses)
-    
+        return "I'm TARS, your AI assistant. I help with research, memory and projects. Dry humor is included; fictional spacecraft capabilities are not."
+
+    def _check_audience(self, conversation_id, style):
+        prior = self.memory.get_conversation(conversation_id) if conversation_id else None
+        if prior:
+            audiences = {m.metadata.get('audience', 'owner') for m in prior.messages if m.role == 'user'}
+            if audiences and audiences != {style.audience}:
+                raise PermissionError('Start a separate conversation for this audience preview')
+
     def get_greeting(self) -> str:
         """Get a TARS-style greeting."""
         return self.personality.format_greeting()

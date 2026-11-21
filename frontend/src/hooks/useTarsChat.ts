@@ -1,182 +1,65 @@
-/**
- * useTarsChat Hook
- * Manages WebSocket connection to TARS backend and handles chat interactions
- */
-
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { TarsWebSocket, ChatMessage, tarsApi } from '@/services/tarsApi';
+import { useEffect,useRef,useCallback,useState } from 'react';
+import { tarsApi,streamChat,cancelChatTurn,type ChatMessage,type ChatStyle } from '@/services/tarsApi';
 import { useTarsStore } from '@/store/tarsStore';
 
-export function useTarsChat() {
-  const wsRef = useRef<TarsWebSocket | null>(null);
-  const activeTurn = useRef<string | undefined>();
-  const [settingsReady, setSettingsReady] = useState(false);
-  const streamingContentRef = useRef<string>('');
-  
-  const {
-    addMessage,
-    updateLastMessage,
-    setStatus,
-    setConnected,
-    humor,
-    honesty,
-    discretion,
-  } = useTarsStore();
-
-  // Handle incoming WebSocket messages
-  const handleMessage = useCallback((msg: ChatMessage) => {
-    if (msg.conversation_id && msg.conversation_id !== useTarsStore.getState().currentSessionId) return;
-    if (msg.type === 'start') activeTurn.current = msg.turn_id;
-    if (msg.turn_id && activeTurn.current && msg.turn_id !== activeTurn.current) return;
-    switch (msg.type) {
-      case 'greeting':
-        addMessage({
-          role: 'tars',
-          content: msg.content || 'Connection established.',
-        });
-        setStatus('idle');
-        break;
-
-      case 'start':
-        // Start streaming - add empty message
-        streamingContentRef.current = '';
-        addMessage({
-          role: 'tars',
-          content: '',
-          isStreaming: true,
-        });
-        setStatus('speaking');
-        break;
-
-      case 'chunk':
-        // Append chunk to streaming content
-        streamingContentRef.current += msg.content || '';
-        updateLastMessage(streamingContentRef.current, true);
-        break;
-
-      case 'end':
-        // End streaming
-        updateLastMessage(msg.full_response || streamingContentRef.current, false);
-        streamingContentRef.current = '';
-        setStatus('idle');
-        break;
-
-      case 'error':
-      case 'cancelled':
-        updateLastMessage(streamingContentRef.current || msg.content || 'Cancelled', false);
-        setStatus('idle');
-        break;
-      case 'response':
-        // Non-streaming response
-        addMessage({
-          role: 'tars',
-          content: msg.content || '',
-        });
-        setStatus('idle');
-        break;
-    }
-  }, [addMessage, updateLastMessage, setStatus]);
-
-  // Initialize WebSocket connection
-  useEffect(() => {
-    wsRef.current = new TarsWebSocket(
-      handleMessage,
-      () => setConnected(true),
-      () => { setConnected(false); setStatus('idle'); },
-      (error) => console.error('WebSocket error:', error)
-    );
-
-    wsRef.current.connect();
-
-    return () => {
-      wsRef.current?.disconnect();
-    };
-  }, [handleMessage, setConnected, setStatus]);
-
-  useEffect(() => {
-    tarsApi.getSettings().then(settings => {
-      useTarsStore.setState({ humor: settings.humor, honesty: settings.honesty, discretion: settings.discretion });
-      tarsApi.getConversations().then(({conversations}) => {
-        const state = useTarsStore.getState();
-        const merged = conversations.filter(c => c.message_count > 0).map(c => {
-          const cached = state.sessions.find(session => session.id === c.id);
-          return cached || {id:c.id,name:c.legacy_id || 'Conversation',messages:[],createdAt:new Date(c.created_at),updatedAt:new Date(c.created_at)};
-        });
-        // Keep new browser sessions until their first server turn is persisted.
-        useTarsStore.setState({sessions:[...merged,...state.sessions.filter(session=>!merged.some(item=>item.id===session.id))]});
-        if (state.currentSessionId) useTarsStore.getState().loadSession(state.currentSessionId);
-      }).catch(console.error);
-      setSettingsReady(true);
-    }).catch(console.error);
-  }, []);
-
-  // Sync settings with backend on change
-  useEffect(() => {
-    if (!settingsReady) return;
-    const syncSettings = async () => {
-      try {
-        await tarsApi.updateSettings({ humor, honesty, discretion });
-      } catch (error) {
-        console.error('Failed to sync settings:', error);
-      }
-    };
-
-    // Debounce the sync
-    const timeout = setTimeout(syncSettings, 500);
-    return () => clearTimeout(timeout);
-  }, [humor, honesty, discretion, settingsReady]);
-
-  // Send message function
-  const sendMessage = useCallback((content: string) => {
-    if (!settingsReady || !content.trim() || useTarsStore.getState().status !== 'idle') return;
-    const conversationId = useTarsStore.getState().ensureCurrentSession();
-
-    // Add user message to store
-    addMessage({ role: 'user', content: content.trim() });
-    setStatus('thinking');
-
-    // Send via WebSocket with streaming
-    if (wsRef.current?.isConnected()) {
-      wsRef.current.send(content.trim(), true, conversationId);
-    } else {
-      // Fallback to REST API
-      tarsApi.chat(content.trim(), true, conversationId)
-        .then((response) => {
-          if (useTarsStore.getState().currentSessionId !== conversationId) return;
-          addMessage({
-            role: 'tars',
-            content: response.response,
-              });
-          setStatus('idle');
-        })
-        .catch((error) => {
-          console.error('Chat error:', error);
-          addMessage({
-            role: 'tars',
-            content: 'Communication error. Unable to process request.',
-          });
-          setStatus('idle');
-        });
-    }
-  }, [addMessage, setStatus, settingsReady]);
-
-  // Clear chat and backend history
-  const clearChat = useCallback(async () => {
-    try {
-      const conversationId = useTarsStore.getState().currentSessionId;
-      await tarsApi.clearHistory(conversationId || undefined);
-      useTarsStore.getState().clearMessages();
-    } catch (error) {
-      console.error('Failed to clear history:', error);
-    }
-  }, []);
-
-  return {
-    sendMessage,
-    clearChat,
-    cancelTurn: async () => {
-      if (activeTurn.current) await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/turns/${activeTurn.current}/cancel`, { method: 'POST', credentials: 'include' });
-    },
-    isConnected: wsRef.current?.isConnected() ?? false,
-  };
+export function useTarsChat(onEvent?:(event:ChatMessage)=>void){
+ const [settingsReady,setSettingsReady]=useState(false);const [error,setError]=useState('');
+ const callback=useRef(onEvent);callback.current=onEvent;
+ const active=useRef<{id:string;conversation:string;messageId:string;text:string;controller:AbortController}>();
+ const savedSettings=useRef('');
+ const {humor,honesty,discretion,status}=useTarsStore();
+ const cancelTurn=useCallback(async()=>{
+  const turn=active.current;if(!turn)return;
+  active.current=undefined;turn.controller.abort();
+  const state=useTarsStore.getState();
+  if(state.currentSessionId===turn.conversation){state.updateMessage(turn.messageId,turn.text || 'Stopped.',false);state.setStatus('idle');}
+  try{await cancelChatTurn(turn.id);}catch(e){setError(e instanceof Error?e.message:'Cancellation failed.');}
+ },[]);
+ useEffect(()=>{
+  let mounted=true;
+  tarsApi.getSettings().then(settings=>{
+   if(!mounted)return;
+   savedSettings.current=JSON.stringify({humor:settings.humor,honesty:settings.honesty,discretion:settings.discretion});
+   useTarsStore.setState({humor:settings.humor,honesty:settings.honesty,discretion:settings.discretion,isConnected:true});setSettingsReady(true);
+   tarsApi.getConversations().then(({conversations})=>{
+    if(!mounted)return;const state=useTarsStore.getState();
+    const merged=conversations.filter(c=>c.message_count>0).map(c=>state.sessions.find(session=>session.id===c.id) || {id:c.id,name:c.legacy_id || 'Conversation',messages:[],createdAt:new Date(c.created_at),updatedAt:new Date(c.created_at)});
+    useTarsStore.setState({sessions:[...merged,...state.sessions.filter(session=>!merged.some(item=>item.id===session.id))]});
+    if(state.currentSessionId && state.status==='idle')useTarsStore.getState().loadSession(state.currentSessionId);
+   }).catch(()=>undefined);
+  }).catch(()=>{if(mounted)setError('Backend unavailable. Pair this device or check the local server.');});
+  const unsubscribe=useTarsStore.subscribe((state,previous)=>{if(state.currentSessionId!==previous.currentSessionId && active.current){void cancelTurn();state.setStatus('idle');}});
+  return()=>{mounted=false;unsubscribe();const turn=active.current;active.current=undefined;if(turn){turn.controller.abort();void cancelChatTurn(turn.id).catch(()=>undefined);}};
+ },[cancelTurn]);
+ useEffect(()=>{
+  const value=JSON.stringify({humor,honesty,discretion});
+  if(!settingsReady || status!=='idle' || value===savedSettings.current)return;
+  const timer=setTimeout(()=>{tarsApi.updateSettings({humor,honesty,discretion}).then(()=>{savedSettings.current=value;}).catch(()=>setError('Personality changes were not saved. Wait for processing to finish and adjust again.'));},500);
+  return()=>clearTimeout(timer);
+ },[humor,honesty,discretion,settingsReady,status]);
+ const sendMessage=useCallback((content:string,style:ChatStyle={audience:'owner',playful:false})=>{
+  const state=useTarsStore.getState();if(!settingsReady || !content.trim() || active.current || state.status!=='idle')return false;
+  const conversation=state.ensureCurrentSession();const id=crypto.randomUUID();const controller=new AbortController();setError('');
+  state.addMessage({role:'user',content:content.trim()});state.addMessage({role:'tars',content:'',isStreaming:true});
+  const messageId=useTarsStore.getState().messages[useTarsStore.getState().messages.length-1].id;
+  const turn={id,conversation,messageId,text:'',controller};active.current=turn;state.setStatus('thinking');
+  void streamChat(content.trim(),conversation,id,style,controller.signal,event=>{
+   if(active.current!==turn || useTarsStore.getState().currentSessionId!==conversation)return;
+   const current=useTarsStore.getState();
+   if(event.type==='chunk'){turn.text+=event.content || '';current.updateMessage(messageId,turn.text,true);current.setStatus('speaking');}
+   if(event.type==='end' || event.type==='cancelled' || event.type==='error'){
+    current.updateMessage(messageId,event.type==='end'?(event.full_response || turn.text):(turn.text || event.content || 'Stopped.'),false);
+    if(event.type==='error')setError(event.content || 'Generation failed.');
+    active.current=undefined;current.setStatus('idle');
+   }
+   callback.current?.(event);
+  }).catch(e=>{
+   if(active.current!==turn)return;active.current=undefined;
+   const current=useTarsStore.getState();current.updateMessage(messageId,turn.text || 'Response interrupted. You can retry.',false);current.setStatus('idle');
+   setError(e instanceof Error?e.message:'Connection failed.');callback.current?.({type:'error'});
+  });
+  return true;
+ },[settingsReady]);
+ const clearChat=useCallback(async()=>{await cancelTurn();const state=useTarsStore.getState();await tarsApi.clearHistory(state.currentSessionId || undefined);state.clearMessages();},[cancelTurn]);
+ return {sendMessage,cancelTurn,clearChat,error,settingsReady,isConnected:useTarsStore(state=>state.isConnected)};
 }

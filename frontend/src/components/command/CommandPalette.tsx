@@ -107,8 +107,8 @@ export function CommandPalette() {
     },
     {
       id: 'toggle-voice',
-      label: isVoiceMode ? 'Disable Voice Mode' : 'Enable Voice Mode',
-      description: 'Toggle voice input',
+      label: isVoiceMode ? 'Close Voice Settings' : 'Open Voice Settings',
+      description: 'Review speech consent and language; microphone starts separately',
       icon: <Mic className="w-4 h-4" />,
       action: () => { toggleVoiceMode(); setCommandPaletteOpen(false); },
       category: 'audio',

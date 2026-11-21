@@ -12,7 +12,7 @@ export function PersonalityPanel() {
           Personality Matrix
         </h3>
         <p className="text-[10px] text-muted-foreground/60 font-terminal">
-          Adjust behavioral parameters
+          Tone only. Truthfulness and access rules stay fixed.
         </p>
       </div>
       
@@ -34,7 +34,7 @@ export function PersonalityPanel() {
         />
         
         <TarsSlider
-          label="Discretion"
+          label="Restraint"
           value={discretion}
           onChange={setDiscretion}
           icon={<Lock className="w-3.5 h-3.5" />}

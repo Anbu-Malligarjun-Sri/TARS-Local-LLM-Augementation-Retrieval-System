@@ -101,7 +101,7 @@ def test_concurrent_sessions_and_same_session_serialization(client, monkeypatch)
     engine = api._engine
     active = set()
     overlap = []
-    def stream(message, conversation_id):
+    def stream(message, conversation_id, **turn_options):
         assert conversation_id not in active
         active.add(conversation_id)
         overlap.append(len(active))

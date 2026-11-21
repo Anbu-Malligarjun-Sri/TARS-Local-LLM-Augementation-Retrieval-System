@@ -68,6 +68,30 @@ export interface RagStats {
   embedding_dimension: number;
 }
 
+export interface ChatStyle {audience:'owner'|'parent'|'friend'|'professional'|'unknown';playful:boolean;language?:'en-IN'|'ta-IN'}
+export async function cancelChatTurn(id:string){
+  const response=await apiFetch(`${API_BASE}/api/turns/${id}/cancel`,{method:'POST'});
+  if(!response.ok)throw new Error('Server cancellation was not acknowledged. Local playback and display have stopped.');
+}
+export async function streamChat(message:string,conversationId:string,turnId:string,style:ChatStyle,signal:AbortSignal,onEvent:(event:ChatMessage)=>void){
+ const response=await apiFetch(`${API_BASE}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,conversation_id:conversationId,turn_id:turnId,style,stream:true}),signal});
+ if(!response.ok || !response.body)throw new Error(`Chat failed (${response.status}).`);
+ const reader=response.body.getReader();const decoder=new TextDecoder();let pending='';let terminal=false;
+ try{
+  while(true){const {done,value}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});
+   if(pending.length>1000000)throw new Error('Chat event exceeded the size limit.');
+   let boundary:number;
+   while((boundary=pending.indexOf('\n\n'))>=0){const frame=pending.slice(0,boundary);pending=pending.slice(boundary+2);
+    const payload=frame.split('\n').filter(line=>line.startsWith('data: ')).map(line=>line.slice(6)).join('\n');if(!payload)continue;
+    const event=JSON.parse(payload) as ChatMessage;
+    if(event.turn_id!==turnId || event.conversation_id!==conversationId)continue;
+    onEvent(event);if(['end','cancelled','error'].includes(event.type)){terminal=true;return;}
+   }
+  }
+  if(!terminal && !signal.aborted)throw new Error('Response connection closed before completion.');
+ }finally{await reader.cancel().catch(()=>undefined);reader.releaseLock();}
+}
+
 // REST API functions
 export const tarsApi = {
   // Chat endpoints
@@ -111,7 +135,7 @@ export const tarsApi = {
   },
 
   // History endpoints
-  async getHistory(conversationId?: string): Promise<{ conversation_id: string; messages: unknown[]; count: number }> {
+  async getHistory(conversationId?: string): Promise<{ conversation_id: string; messages: unknown[]; count: number; audience?:ChatStyle['audience'] }> {
     const query = conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : '';
     const res = await apiFetch(`${API_BASE}/api/history${query}`);
     if (!res.ok) throw new Error(`Failed to get history: ${res.statusText}`);

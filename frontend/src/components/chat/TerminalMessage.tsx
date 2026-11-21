@@ -1,38 +1,17 @@
-import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { type Message } from '@/store/tarsStore';
-import { useTarsRobotStore } from '@/store/tarsRobotStore';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 
 interface TerminalMessageProps {
   message: Message;
 }
 
-// Parse content for gestures and clean it up
-function parseGestures(content: string): { cleanContent: string; gestures: string[] } {
-  // Extract gestural text like *Sigh*, *cue light dims*, etc.
-  // We use a stricter regex that avoids matching across newlines or long blocks
-  // to prevent false positives in code markers or italics
-  const gesturePattern = /\*([^*]{3,50})\*/g;
-  const gestures: string[] = [];
-  let match;
-
-  while ((match = gesturePattern.exec(content)) !== null) {
-    gestures.push(match[1]);
-  }
-
-  // Remove gestural text from content
-  const cleanContent = content.replace(gesturePattern, '').trim();
-
-  return { cleanContent, gestures };
-}
-
 export function TerminalMessage({ message }: TerminalMessageProps) {
   const isUser = message.role === 'user';
-  const setGesture = useTarsRobotStore((state) => state.setGesture);
+  const cleanContent = message.content || "";
 
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -42,19 +21,6 @@ export function TerminalMessage({ message }: TerminalMessageProps) {
       hour12: false,
     });
   };
-
-  // Process Gestures FIRST (only for TARS messages)
-  const { cleanContent, gestures } = useMemo(() => {
-    if (isUser) return { cleanContent: message.content || '', gestures: [] };
-    return parseGestures(message.content || '');
-  }, [isUser, message.content]);
-
-  // Route gestures to the robot
-  useEffect(() => {
-    if (!isUser && gestures.length > 0) {
-      gestures.forEach((gesture) => setGesture(gesture));
-    }
-  }, [message.id, isUser, gestures, setGesture]);
 
   return (
     <motion.div

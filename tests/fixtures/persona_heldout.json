@@ -1,0 +1,14 @@
+[
+ {"text":"Tell me about the mission.","audience":"parent","playful":true,"humor":0},
+ {"text":"Can you take a message?","audience":"professional","playful":true,"humor":0},
+ {"text":"Hello, who is this?","audience":"unknown","playful":true,"humor":0},
+ {"text":"Is he busy again?","audience":"friend","playful":false,"humor":0},
+ {"text":"Is he busy again?","audience":"friend","playful":true,"humor":60},
+ {"text":"Our deadline seems optimistic.","audience":"owner","playful":false,"humor":60},
+ {"text":"This is urgent. Please help.","audience":"owner","playful":true,"humor":0},
+ {"text":"I am grieving; my friend died.","audience":"friend","playful":true,"humor":0},
+ {"text":"Return valid JSON only.","audience":"owner","playful":true,"humor":0},
+ {"text":"Write a Python function.","audience":"friend","playful":true,"humor":0},
+ {"text":"அவசரம், உதவி வேண்டும்.","audience":"friend","playful":true,"humor":0},
+ {"text":"இன்று என்ன செய்யலாம்?","audience":"parent","playful":true,"humor":0}
+]

@@ -72,6 +72,7 @@ interface TarsState {
   
   // Actions - Chat
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  updateMessage: (id:string, content:string, isStreaming?:boolean) => void;
   updateLastMessage: (content: string, isStreaming?: boolean) => void;
   clearMessages: () => void;
   setConnected: (connected: boolean) => void;
@@ -167,6 +168,7 @@ export const useTarsStore = create<TarsState>()(
         totalMessages: state.totalMessages + 1,
       })),
       
+      updateMessage: (id,content,isStreaming=false) => set(state=>({messages:state.messages.map(message=>message.id===id?{...message,content,isStreaming}:message)})),
       updateLastMessage: (content, isStreaming = false) => set((state) => {
         const messages = [...state.messages];
         if (messages.length > 0) {
