@@ -1,6 +1,6 @@
 """Persistent projects/tasks; all mutations share the tool-run transaction."""
 import json
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import Literal
 from uuid import UUID,uuid4
 from pydantic import Field,field_validator
@@ -34,7 +34,7 @@ class TaskCreate(Arguments):
     def due_date(cls,value):
         if value is not None and datetime.fromisoformat(value).tzinfo is None:
             raise ValueError('Task due time must include a timezone')
-        return value
+        return datetime.fromisoformat(value).astimezone(timezone.utc).isoformat() if value is not None else None
 class TaskUpdate(TaskCreate):
     id: UUID
     expected_version: int=Field(ge=1)
