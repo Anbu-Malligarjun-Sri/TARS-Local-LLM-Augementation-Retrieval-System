@@ -51,3 +51,8 @@ For memory, test isolation/correction/deletion/restart. For tools, test denied g
 ## Memory conventions
 
 Use repository transactions for canonical writes and outbox entries. Never accept principal identity from request bodies. New claims version corrections. Revalidate permissions after embedding/ranking. External exports cannot authorize runtime reads. Label lexical vectors accurately and verify each new projection consumer's deletion/rebuild behavior.
+
+
+## Tool conventions
+
+Register a strict Pydantic argument schema, write/private flags and handler for each tool. Write handlers may perform only local SQL mutations in the supplied transaction; external side effects require a new reconciliation design. Never mint approvals or grants from model/source output. Bind approvals to normalized arguments and request keys to owner/tool/arguments. Preserve failed/interrupted outcomes. Apply SSRF/TLS/data bounds to every redirect destination. Calendar parsing must not fetch ATTACH/URL values; preserve snapshot freshness and supported recurrence limits. Do not silently enable remote Markdown images when displaying untrusted evidence.

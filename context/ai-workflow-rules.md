@@ -38,3 +38,6 @@ Never record API keys, phone numbers, private conversations or personal facts in
 5. Update the tracker and identify the next unit. No automatic pushing/deployment is implied by completion.
 
 Preserve runtime databases, snapshots and backups during memory changes. Tests use temporary repositories. Keep operator mirrors distinct from live dependencies and record external-service/quality gates separately from local implementation milestones.
+
+
+Before adding a tool, specify its side effects, privacy classification, permission/retry policy and output evidence. Test denial/revocation/retry paths before wiring it to chat. Keep tests synthetic and isolate calendar imports from actual owner data. Report public-provider failure or stale calendar state explicitly; do not fabricate results or weaken TLS validation to make a demo pass.

@@ -4,7 +4,7 @@ Last updated: 2026-11-21 (Asia/Calcutta).
 
 ## Current phase
 
-Phases 1 and 2 local paths are implemented and now live-tested with Qwen 3.5 9B and Nomic semantic embeddings. External PostgreSQL/Neo4j deployment and broader quality gates remain pending.
+Phase 3 local tool foundation (units 09–11) IMPLEMENTED and live-tested. Phases 1/2 local paths remain in place. User selected a local ICS snapshot for the first read-only calendar integration; no personal file has been imported yet. External PostgreSQL/Neo4j and broader quality gates remain pending. Coding delegation is Phase 4.
 
 ## Current goal
 
@@ -32,11 +32,11 @@ Live model, microphone, carrier, training and deployment behavior was not exerci
 
 ## In progress
 
-Phase 2 external integration and quality verification remain pending. The local SQL memory path, import, claim lifecycle, projections, authenticated APIs and management UI are implemented. Docker engine was unavailable; PostgreSQL/Neo4j adapters are provided but not live-verified.
+No Phase 3 code unit remains open. Operational follow-up: owner imports their actual `.ics` snapshot and evaluates tasks/research in the running app. Public RSS search remains best-effort and no automatic calendar sync is claimed.
 
 ## Next up
 
-Use Personal memory or `/remember subject | relationship | value` with a local model. Remaining Phase 2 gates: live-model/semantic-embedding checks, owner-authored recall/tone evaluation, optional PostgreSQL/Neo4j deployment and restore verification. Do not claim full external graph-stack deployment. Continuous external projection sync and migration of SQLite-era state into PostgreSQL need a subsequent scoped unit before switching an active installation.
+Refresh TARS at localhost:8081 and use Tools & projects or `/research`, `/fetch`, `/projects`, `/tasks`, `/calendar`. Read `docs/PHASE_3_TOOLS.md`. Next development milestone: Phase 4 isolated durable coding jobs and one coding-agent adapter; create a scoped spec before implementation. Preserve pending Phase 2 external-service/quality gates rather than treating tool completion as proof of those capabilities.
 
 ## Open questions
 
@@ -45,7 +45,7 @@ Use Personal memory or `/remember subject | relationship | value` with a local m
 - Which personal data may go to which cloud providers?
 - Which spoken languages, voice and contact language preferences are needed?
 - Which phone country/carrier and number arrangement: separate assistant number, forwarding or porting?
-- Which calendar/task services should be integrated first?
+- Calendar decision resolved: local read-only ICS snapshots first; future remote services remain optional.
 - Which contact groups may receive playful responses; what are the exact quiet-hour and urgent-call rules?
 
 These block only dependent deployment/integration decisions, not initial local foundation work.
@@ -106,3 +106,17 @@ Final data verification: repeated the real import (0 new files), restored a fres
 - Regression checks: 23 backend tests and 6 frontend tests pass; type checking/build pass. Launch tests cover expiry and one-use enforcement. Browser automation could not open Edge because that browser connector is unavailable; a direct user launch link is provided instead.
 
 Live WebSocket verification also passed: first text arrived in 11.4 seconds and the stream completed. Backend and frontend were left running for owner testing.
+
+
+## Phase 3 session — 2026-11-21
+
+- Implemented `context/specs/03-governed-tools.md` for units 09–11. Added ten schema-validated tools under `src/tools/`: projects list/create/update, tasks list/create/update, calendar read/import, web search/fetch.
+- Persistent scoped read grants, exact one-use five-minute approvals, expiry/revocation, owner-bound request keys, atomic local writes/result/audit, optimistic versions and restart interruption state are enforced outside model output. No shell or external-write tools exist.
+- Added secure public HTTPS fetch with DNS pinning/public-address policy, TLS/redirect validation, finite data/time bounds and safe HTML/XML parsing. Key-free public Bing RSS search is best-effort. `/research` attempts at most two follow-up page reads and appends actual source links/timestamps/run IDs.
+- Added owner projects/tasks and recoverable archive/complete operations. Added bounded ICS import/recurrence/timezone/exception/all-day reads with snapshot age and stale flags. The user chose local `.ics`; no real calendar was supplied or overwritten. Calendar data is transactionally stored in SQL, not an independently mutable file.
+- Added authenticated tool APIs and Tools & projects dialog: concrete review before writes, research evidence, project/task forms/status, calendar import, permission switches, run history. Markdown images are suppressed to prevent untrusted output from causing automatic network requests.
+- Explicit read commands work across existing model adapters; source/model text cannot trigger another tool or approval. This is not a model-native autonomous planning loop. Private project/calendar chat tools require local-only routing.
+- Verified live public search, Python homepage/docs retrieval, approved synthetic project/task creation and completion, and generated `/research` answer with real links (about 40 seconds on local Qwen). Synthetic project archived, task completed. One site's unverifiable certificate was correctly rejected; no TLS bypass used.
+- Backed up canonical memory before startup, activated new backend on loopback and left frontend running. Restarted the pre-existing LM Studio service/models when live summarization initially found them stopped.
+- Verification: 45 backend tests and 8 frontend tests; type checking, lint (7 pre-existing warnings) and production build pass. Tests include prompt injection containment, approval mismatch/expiry, concurrent idempotency, grant revocation, private-mode boundaries, SSRF/redirect/content bounds, recurrence exception/DST cases, rendered review flow and image suppression. No manual browser automation claimed: the updated browser skill file was unavailable, so rendered React and live API checks were used.
+- Installed maintained calendar/recurrence/timezone/safe XML dependencies and refreshed the installed dependency snapshot. Existing conversations, private memories and original JSON were preserved. Runtime docs: `docs/PHASE_3_TOOLS.md`.

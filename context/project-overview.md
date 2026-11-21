@@ -58,3 +58,8 @@ See [architecture plan](../docs/TARS_ARCHITECTURE_PLAN.md) for audit evidence, p
 ## Current delivery
 
 Phase 1 private chat and local Phase 2 memory are implemented. Durable history, sourced owner facts, correction/forget, relationship inspection and shared retrieval are available. External graph deployment and live semantic-quality gates remain pending; later assistant/phone phases remain planned.
+
+
+## Phase 3 delivery
+
+Governed public web research, projects/tasks and the selected local ICS read-only integration are implemented. Tools & projects exposes concrete action review, sources, read grants and activity. Chat supports explicit research/fetch/projects/tasks/calendar read intents; autonomous model planning and coding delegation remain future phases. The owner still needs to import their own `.ics` snapshot for personal calendar data.

@@ -1,6 +1,6 @@
 # Phase 3: governed tools and useful assistance
 
-Status: implementation in progress. Units 09–11.
+Status: units 09–11 implemented and tested; live app updated. Personal calendar data awaits the owner's actual ICS import.
 
 ## Goal
 
@@ -13,7 +13,7 @@ Provide sourced internet research, persistent owner projects/tasks and a read-on
 - Reads may run under explicit scoped grants; local changes require a concrete user approval of tool + exact arguments. An API/UI action can approve its own concrete change. Chat only executes read intents; writes stay reviewable in the Tools UI.
 - Public HTTPS fetching validates DNS, pins a public IP with hostname TLS verification, rejects credentials/private hosts/ports, revalidates redirects, bounds size/time/content types and never forwards cookies/secrets. Search sends only the explicit query; private context is never appended. Results have URL/title/retrieval time and evidence text; quoted web content is untrusted.
 - Projects/tasks are owner-scoped, versioned and idempotent. No destructive delete tools; archive/complete are recoverable status changes. Optional repository directories/notes are not automatically scanned.
-- Calendar is an owner-provided UTF-8 ICS snapshot under ignored `.runtime/calendar/`. Parse using established ICS/recurrence libraries; bound date windows/event counts, handle timezone/all-day/recurrence exceptions, expose source freshness and no calendar writes. Re-import replaces snapshot atomically; no background sync claim.
+- Calendar is an owner-provided UTF-8 ICS snapshot copied into the ignored canonical SQL database. Parse using established ICS/recurrence libraries; bound date windows/event counts, handle timezone/all-day/recurrence exceptions, expose source freshness and no calendar writes. Re-import replaces snapshot atomically; no background sync claim.
 - Default cloud routing must not see private project/calendar output. Decline private tools if cloud mode is enabled; use local mode for these turns.
 - Explicit `/research`, `/fetch`, `/projects`, `/tasks`, `/calendar` intents work across model adapters. No claim of an autonomous model tool loop. Answer generation is bounded and source links are appended deterministically.
 

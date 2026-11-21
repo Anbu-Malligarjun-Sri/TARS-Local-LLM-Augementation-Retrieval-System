@@ -50,3 +50,8 @@ Approval UI shows the concrete action, target, relevant content/diff and scope. 
 ## Implemented memory surface
 
 Personal memory opens a dialog for facts/search, source inspection, cloud opt-in, correction, confirmed forget, export and rebuild. Relationship inspection uses a directed edge table with node count; a graph canvas is not implemented. Memory status shows backend/model/local projection lag. Retention notes separate facts from transcripts/backups. Imported server sessions appear in chat history.
+
+
+## Implemented tools surface
+
+Tools & projects opens a dialog with Projects, Research, Calendar, Permissions and Activity tabs. Local writes require a review of tool name and exact arguments followed by Approve and run. Retry preserves the request key; failures are shown, never labeled completed. Source URLs, retrieval times, source type and bounded evidence are inspectable. Calendar uses an explicit file picker, timezone, import review and snapshot freshness note. Archives/completions are recoverable through Show archived/Show completed. Source/model Markdown images are disabled; links remain explicit user actions.

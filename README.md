@@ -80,6 +80,10 @@ TARS chatbot version 1/
 └── main.py             # Application entry point
 ```
 
+## Phase 3 tools and projects
+
+Open **Tools & projects** for public research, projects/tasks, permissions, activity and read-only ICS calendar snapshots. Chat supports `/research`, `/fetch`, `/projects`, `/tasks` and `/calendar`. Writes require concrete approval. See [Phase 3 usage and limits](docs/PHASE_3_TOOLS.md). Import your actual `.ics` file to populate the calendar; no live account connection or calendar editing is enabled.
+
 ## Phase 2 personal memory
 
 Local memory now stores complete conversations and sourced owner facts, with correction, forgetting, relationship inspection and retrieval across models. Read [memory usage and limits](docs/PHASE_2_MEMORY.md). Legacy JSON is snapshotted and imported without rewriting originals. External PostgreSQL/Neo4j deployment and live semantic-quality checks remain pending.

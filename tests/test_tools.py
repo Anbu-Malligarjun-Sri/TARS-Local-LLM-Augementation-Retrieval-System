@@ -187,3 +187,14 @@ def test_fetch_budget_and_unsupported_content():
     with pytest.raises(ToolError,match='too large'):web.fetch('https://example.com')
     response.content_type='application/octet-stream'
     with pytest.raises(ToolError,match='Only text'):web.fetch('https://example.com')
+
+def test_expired_tool_approval_and_grant_are_rejected(gateway):
+    args={'name':'Expired approval'}
+    approval=gateway.approve('owner','projects.create',args)['approval_id']
+    with gateway.repository.transaction() as db:
+        db.execute("UPDATE tool_approvals SET expires='2000-01-01T00:00:00+00:00' WHERE id=?",(approval,))
+        db.execute("UPDATE tool_grants SET expires='2000-01-01T00:00:00+00:00' WHERE owner=? AND tool=?",('owner','tasks.list'))
+    with pytest.raises(ToolError,match='expired'):gateway.execute('owner','projects.create',args,str(uuid4()),approval)
+    with pytest.raises(ToolError):run(gateway,'tasks.list')
+    with gateway.repository.transaction() as db:
+        assert db.execute('SELECT COUNT(*) AS n FROM projects').fetchone()['n']==0
