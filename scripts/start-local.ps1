@@ -25,6 +25,7 @@ if (-not (Get-NetTCPConnection -State Listen -LocalPort 8081 -ErrorAction Silent
 }
 # A single-use fragment ticket is exchanged for an HttpOnly cookie, then removed.
 # The owner token is never placed in a browser URL.
+& (Join-Path $PSScriptRoot 'start-coding-worker.ps1')
 $launchUrl = & $pythonPath -m src.interfaces.launch
 Write-Output "TARS launch link (single use; valid for ten minutes): $launchUrl"
 Start-Process $launchUrl -WindowStyle Hidden

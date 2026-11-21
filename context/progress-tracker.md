@@ -4,7 +4,7 @@ Last updated: 2026-11-21 (Asia/Calcutta).
 
 ## Current phase
 
-Phase 3 local tool foundation (units 09–11) IMPLEMENTED and live-tested. Phases 1/2 local paths remain in place. User selected a local ICS snapshot for the first read-only calendar integration; no personal file has been imported yet. External PostgreSQL/Neo4j and broader quality gates remain pending. Coding delegation is Phase 4.
+Phase 4 units 12–13 local implementation delivered: durable approved coding queue, filtered snapshots, Codex cloud adapter and review UI. Live execution acceptance remains BLOCKED by the Windows Codex sandbox provisioning service; no live cloud coding success is claimed. Phases 1–3 remain available. External database/quality gates and personal ICS import remain pending.
 
 ## Current goal
 
@@ -32,11 +32,11 @@ Live model, microphone, carrier, training and deployment behavior was not exerci
 
 ## In progress
 
-No Phase 3 code unit remains open. Operational follow-up: owner imports their actual `.ics` snapshot and evaluates tasks/research in the running app. Public RSS search remains best-effort and no automatic calendar sync is claimed.
+Phase 4 live sandbox/cloud integration remains open. The official standalone CLI and local daemon were installed; the native probe still reports app runtime provisioning service unavailable and refuses helper fallback. Execution stops before cloud disclosure. Repair the supported runtime, rerun canaries, then approve a small synthetic live job. Do not weaken sandbox policy.
 
 ## Next up
 
-Refresh TARS at localhost:8081 and use Tools & projects or `/research`, `/fetch`, `/projects`, `/tasks`, `/calendar`. Read `docs/PHASE_3_TOOLS.md`. Next development milestone: Phase 4 isolated durable coding jobs and one coding-agent adapter; create a scoped spec before implementation. Preserve pending Phase 2 external-service/quality gates rather than treating tool completion as proof of those capabilities.
+Refresh TARS at localhost:8081 and open Coding jobs. Local snapshot preparation, source review and approval/cancel are available; readiness exposes the execution blocker. See `docs/PHASE_4_CODING.md`. Finish the live Phase 4 gate before claiming operational coding delegation. Phase 5 audience persona/voice remains planned.
 
 ## Open questions
 
@@ -120,3 +120,17 @@ Live WebSocket verification also passed: first text arrived in 11.4 seconds and 
 - Backed up canonical memory before startup, activated new backend on loopback and left frontend running. Restarted the pre-existing LM Studio service/models when live summarization initially found them stopped.
 - Verification: 45 backend tests and 8 frontend tests; type checking, lint (7 pre-existing warnings) and production build pass. Tests include prompt injection containment, approval mismatch/expiry, concurrent idempotency, grant revocation, private-mode boundaries, SSRF/redirect/content bounds, recurrence exception/DST cases, rendered review flow and image suppression. No manual browser automation claimed: the updated browser skill file was unavailable, so rendered React and live API checks were used.
 - Installed maintained calendar/recurrence/timezone/safe XML dependencies and refreshed the installed dependency snapshot. Existing conversations, private memories and original JSON were preserved. Runtime docs: `docs/PHASE_3_TOOLS.md`.
+
+
+## Phase 4 session — 2026-11-21
+
+- Owner selected Codex cloud with explicit per-job approval. Added scoped spec before code. Cloud coding is a separate opt-in from local chat; no API key/account was invented or copied.
+- Added additive canonical SQL coding_jobs/coding_events, owner-bound idempotency, immutable snapshot/contract approval hashes, 45-second renewable leases, heartbeat, finite deadlines/output/observed token budgets, cancellation and restart interruption without automatic replay.
+- Added filtered independent Git snapshots instead of shared-object worktrees, to avoid exposing historical private data. Registered repository aliases, path/hash/byte manifests, source review, link/config/private-data exclusions, isolated baseline/workspace and unchanged originals. Filtering does not guarantee inline secret detection.
+- Added installed Codex CLI adapter, filtered child environment, ignored config/rules/hooks/extra integrations/subagents, restrictive filesystem/network policy, mandatory generated-canary preflight and sandboxed acceptance profiles. No unsandboxed fallback or automatic source apply/merge/push.
+- Added worker process-tree cleanup and artifacts: new/deleted/changed files, downloadable patch (including missing-final-newline markers), agent/usage/check evidence, failures and explicit limitations. Large result bodies are fetched only for selected jobs.
+- Added authenticated API and sidebar Coding jobs review UI with separate cloud checkbox/approval, source preview, readiness probe, status/cancel and patch/check review. Added background worker launcher and setup/recovery guide.
+- Verification: 62 backend tests, 9 frontend tests; typecheck, lint and production build pass. Tests use synthetic repositories and mocked coding adapters; actual subprocess timeout/output/stream-tail behavior is covered. Seven pre-existing lint warnings and existing build/Chroma advisories remain.
+- Live blocker: bundled CLI 0.171.0-alpha.13 and official npm CLI 0.171.0 both fail native sandbox provisioning. Installed/started official local daemon; probe still returns `app runtime provisioning service is unavailable; refusing helper fallback`. No live cloud coding or live sandboxed test pass claimed. No source was sent in generated canary probes.
+- Runtime cloud coding opt-in follows owner selection; provider login remains managed by official Codex. Private runtime files/installations/logs stay ignored. Created an online canonical-memory backup before activating the backend/worker. Verified live authenticated snapshot preparation/source inspection/cancellation without cloud approval, and confirmed all original conversation JSON hashes remain unchanged. Services are running locally.
+- Next: repair supported Codex desktop/runtime provisioning; rerun readiness canaries and an explicitly approved synthetic live job. Phase 4 operational acceptance remains open.

@@ -37,9 +37,11 @@ class ProcessTree:
 
 
 def bounded(argv,cwd,env,timeout,cancel=lambda:None,input_text='',on_line=None,max_output=2000000):
+    reason=cancel()
+    if reason:raise ProcessLimit(reason)
     flags=subprocess.CREATE_NEW_PROCESS_GROUP|subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0
     process=subprocess.Popen(argv,cwd=cwd,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,creationflags=flags,start_new_session=os.name!='nt')
-    tree=ProcessTree(process);chunks=queue.Queue(maxsize=128);stop=threading.Event()
+    tree=ProcessTree(process);chunks=queue.Queue(maxsize=128);stop=threading.Event();reader_done=threading.Event()
     def reader():
         try:
             while not stop.is_set():
@@ -49,6 +51,7 @@ def bounded(argv,cwd,env,timeout,cancel=lambda:None,input_text='',on_line=None,m
                     try:chunks.put(data,timeout=.1);break
                     except queue.Full:continue
         finally:
+            reader_done.set()
             try:chunks.put_nowait(None)
             except queue.Full:pass
     def writer():
@@ -63,7 +66,7 @@ def bounded(argv,cwd,env,timeout,cancel=lambda:None,input_text='',on_line=None,m
             if time.monotonic()-start>timeout:raise ProcessLimit('deadline_exceeded')
             try:data=chunks.get(timeout=.15)
             except queue.Empty:
-                if process.poll() is not None and not chunks.qsize():break
+                if process.poll() is not None and reader_done.is_set() and chunks.empty():break
                 continue
             if data is None:done=True
             else:

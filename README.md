@@ -4,6 +4,8 @@
 
 # TARS Chatbot
 
+Phase 4 adds reviewed coding jobs in the sidebar. See [coding setup and current runtime limitation](docs/PHASE_4_CODING.md): local preparation/review works; live Codex execution awaits sandbox provisioning repair.
+
 > **Personal intelligence roadmap (2026-11-21):** Read the [codebase assessment and phased architecture plan](docs/TARS_ARCHITECTURE_PLAN.md) for the migration toward shared graph memory, model-independent personality, coding assistance, voice and phone handling. The six project context files start at [project overview](context/project-overview.md); actual implementation status is in the [progress tracker](context/progress-tracker.md). The feature descriptions below describe the legacy project and should be read alongside the audit's capability limitations.
 
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)

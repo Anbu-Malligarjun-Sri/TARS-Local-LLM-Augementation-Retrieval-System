@@ -1,3 +1,4 @@
+import { CodingJobsPanel } from '@/components/jobs/CodingJobsPanel';
 import { ToolsPanel } from '@/components/tools/ToolsPanel';
 import { MemoryPanel } from '@/components/memory/MemoryPanel';
 import { motion } from 'framer-motion';
@@ -65,6 +66,7 @@ export function MonolithSidebar() {
         >
           <MemoryPanel />
           <ToolsPanel />
+          <CodingJobsPanel />
           <PersonalityPanel />
           <ExtendedSettingsPanel />
           <SystemStatus />

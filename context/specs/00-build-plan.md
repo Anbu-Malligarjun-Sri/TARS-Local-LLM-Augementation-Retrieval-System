@@ -1,6 +1,6 @@
 # Ordered build plan
 
-Phase 0 planning and Phase 1 are implemented. Phase 2 local milestones are delivered; external integration and quality gates remain pending. Phase 3 units 09–11 are implemented (local ICS selected); units 12 onward are planned. Introduce dependencies only when their unit uses them. Estimates and phase acceptance gates: [detailed plan](../../docs/TARS_ARCHITECTURE_PLAN.md).
+Phase 0 planning and Phase 1 are implemented. Phase 2 local milestones are delivered; external integration and quality gates remain pending. Phase 3 units 09–11 are implemented (local ICS selected); Phase 4 units 12–13 are implemented locally; live sandbox/cloud execution remains blocked by runtime provisioning. Units 14 onward are planned. Introduce dependencies only when their unit uses them. Estimates and phase acceptance gates: [detailed plan](../../docs/TARS_ARCHITECTURE_PLAN.md).
 
 | Unit | Phase | Visible outcome | Depends on |
 | --- | --- | --- | --- |

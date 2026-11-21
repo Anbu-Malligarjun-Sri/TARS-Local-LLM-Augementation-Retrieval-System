@@ -63,3 +63,8 @@ Phase 1 private chat and local Phase 2 memory are implemented. Durable history, 
 ## Phase 3 delivery
 
 Governed public web research, projects/tasks and the selected local ICS read-only integration are implemented. Tools & projects exposes concrete action review, sources, read grants and activity. Chat supports explicit research/fetch/projects/tasks/calendar read intents; autonomous model planning and coding delegation remain future phases. The owner still needs to import their own `.ics` snapshot for personal calendar data.
+
+
+## Phase 4 delivery and limitation
+
+Approved durable coding jobs, filtered isolated source snapshots, first Codex cloud adapter and diff/check review UI are implemented. The owner chose Codex cloud with explicit job approval; personal chat/memory stay under their existing local policy. Actual coding execution is blocked by Windows Codex sandbox provisioning and fails before cloud source disclosure. Local tests are not proof of live Codex integration. See `docs/PHASE_4_CODING.md`; persona/voice/phone work remains future scope.

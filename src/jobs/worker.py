@@ -5,7 +5,7 @@ from uuid import uuid4
 from .workspace import verify_snapshot,artifacts,JobError
 from .process import ProcessLimit
 from .service import get_store
-from src.agents.codex import CodexAdapter
+from src.agents.codex import configured_adapter
 
 
 def execute_job(store,job,worker,adapter):
@@ -22,8 +22,11 @@ def execute_job(store,job,worker,adapter):
         remaining=int(deadline-time.monotonic())
         if remaining<1:raise ProcessLimit('deadline_exceeded')
         execution_job={**job,'spec':{**job['spec'],'timeout_seconds':remaining}}
+        reason=alive()
+        if reason:raise ProcessLimit(reason)
         agent=adapter.run(execution_job,folder,alive);output['agent']=agent
         if agent['exit_code']!=0:raise JobError('Codex exited unsuccessfully; inspect agent evidence')
+        store.verifying(job,worker)
         for profile in job['spec']['checks']:
             if alive():raise ProcessLimit(alive())
             remaining=int(deadline-time.monotonic())
@@ -56,7 +59,7 @@ def main():
     while True:
         job=store.claim(worker)
         if job:
-            try:adapter=CodexAdapter()
+            try:adapter=configured_adapter()
             except Exception as error:store.finish(job,worker,'failed',error=str(error));continue
             execute_job(store,job,worker,adapter)
         if args.once:break

@@ -56,3 +56,8 @@ Use repository transactions for canonical writes and outbox entries. Never accep
 ## Tool conventions
 
 Register a strict Pydantic argument schema, write/private flags and handler for each tool. Write handlers may perform only local SQL mutations in the supplied transaction; external side effects require a new reconciliation design. Never mint approvals or grants from model/source output. Bind approvals to normalized arguments and request keys to owner/tool/arguments. Preserve failed/interrupted outcomes. Apply SSRF/TLS/data bounds to every redirect destination. Calendar parsing must not fetch ATTACH/URL values; preserve snapshot freshness and supported recurrence limits. Do not silently enable remote Markdown images when displaying untrusted evidence.
+
+
+## Coding worker conventions
+
+Require owner-bound snapshot/contract approval before queueing cloud work. Keep independent filtered Git metadata, never shared original Git objects/private history. Disable user hooks/config/extra tools and filter subprocess environments. Probe native read/write/network restrictions; fail closed. Execute named acceptance profiles in that same sandbox. Bound deadlines/output, terminate process trees, lease/heartbeat durable jobs and require newly approved attempts after interruption. Distinguish observed token accounting from spending enforcement and mocked adapter tests from live coding evidence. Never auto-apply patches to source.

@@ -26,8 +26,11 @@ def no_links(path,root):
 
 def digest(data):return hashlib.sha256(data).hexdigest()
 
+def git_env():
+    return {**{k:v for k,v in os.environ.items() if not k.upper().startswith('GIT_')},'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull,'GIT_TERMINAL_PROMPT':'0'}
+
 def git(root,*args):
-    env={**os.environ,'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull,'GIT_TERMINAL_PROMPT':'0'}
+    env=git_env()
     result=subprocess.run(['git','-c','core.fsmonitor=false','-C',str(root),*args],capture_output=True,timeout=20,env=env)
     if result.returncode:raise JobError('Git source inspection failed')
     return result.stdout
@@ -64,7 +67,7 @@ def snapshot(source,job_dir,selected):
     encoded=json.dumps(manifest,sort_keys=True,separators=(',',':')).encode()
     (job_dir/'manifest.json').write_bytes(encoded)
     # Independent Git metadata contains only the approved copy, never source objects.
-    subprocess.run(['git','init','-q',str(job_dir/'workspace')],check=True,capture_output=True,timeout=10)
+    subprocess.run(['git','-c','core.hooksPath='+os.devnull,'init','--template=','-q',str(job_dir/'workspace')],check=True,capture_output=True,timeout=10,env=git_env())
     return manifest,digest(encoded)
 
 def verify_snapshot(job_dir,manifest):
@@ -101,7 +104,8 @@ def artifacts(job_dir,manifest):
         try:old=original.decode('utf-8-sig');new=current.decode('utf-8-sig')
         except UnicodeDecodeError:raise JobError('Non-UTF8 output is unsupported')
         changes.append({'path':relative,'status':'added' if relative not in before else 'deleted' if relative not in after else 'modified','before_sha256':digest(original),'after_sha256':digest(current)})
-        patch.extend(difflib.unified_diff(old.splitlines(True),new.splitlines(True),fromfile='a/'+relative if relative in before else '/dev/null',tofile='b/'+relative if relative in after else '/dev/null'))
+        for line in difflib.unified_diff(old.splitlines(True),new.splitlines(True),fromfile='a/'+relative if relative in before else '/dev/null',tofile='b/'+relative if relative in after else '/dev/null'):
+            patch.append(line if line.endswith('\n') else line+'\n\\ No newline at end of file\n')
     text=''.join(patch)
     if len(changes)>50 or len(text.encode())>1000000:raise JobError('Diff exceeds 50 changed files / 1 MB')
     folder=job_dir/'artifacts';folder.mkdir(exist_ok=True)

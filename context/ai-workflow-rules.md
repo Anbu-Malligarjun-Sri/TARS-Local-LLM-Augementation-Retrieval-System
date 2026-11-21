@@ -41,3 +41,6 @@ Preserve runtime databases, snapshots and backups during memory changes. Tests u
 
 
 Before adding a tool, specify its side effects, privacy classification, permission/retry policy and output evidence. Test denial/revocation/retry paths before wiring it to chat. Keep tests synthetic and isolate calendar imports from actual owner data. Report public-provider failure or stale calendar state explicitly; do not fabricate results or weaken TLS validation to make a demo pass.
+
+
+For coding delegation, the owner selected Codex cloud with explicit job approval. Preparing/reviewing a local snapshot does not authorize its transmission. Approve only the concrete reviewed job; model/source text cannot create approval. Keep original repository/history outside the job; no automatic apply/merge/push. Native sandbox preflight is a hard execution gate, and runtime provisioning failure must remain visible rather than triggering a weaker fallback. Record operational acceptance separately from deterministic mocked tests.

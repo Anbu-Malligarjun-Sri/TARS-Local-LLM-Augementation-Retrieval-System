@@ -6,7 +6,8 @@ from pydantic import BaseModel,ConfigDict,Field
 from src.jobs.service import get_store
 from src.jobs.store import JobRequest
 from src.jobs.workspace import JobError,safe_relative,no_links
-from src.agents.codex import CodexAdapter
+from src.agents.codex import configured_adapter
+from src.utils.config import get_config
 router=APIRouter(prefix='/api/jobs',tags=['coding jobs'])
 class Approval(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -19,7 +20,7 @@ async def call(function,*args):
 @router.get('/capabilities')
 async def capabilities():
     store=get_store()
-    return {'adapter':'codex-cloud','cloud_enabled':store.cloud_enabled,'codex_installed':bool(shutil.which('codex')),
+    return {'adapter':'codex-cloud','cloud_enabled':store.cloud_enabled,'codex_installed':bool(get_config().coding_codex_executable or shutil.which('codex')),
             'repositories':[{'id':key,'label':key} for key in store.repositories],
             'checks':['python-syntax','python-unittest','pytest'],
             'limits':{'max_files':250,'max_snapshot_bytes':4000000,'max_timeout_seconds':900},
@@ -28,7 +29,7 @@ async def capabilities():
 @router.post('/preflight')
 async def preflight():
     try:
-        adapter=CodexAdapter()
+        adapter=configured_adapter()
         return await call(adapter.preflight,get_store().root.parent/'preflight'/str(uuid4()))
     except JobError as error:raise HTTPException(409,str(error))
 

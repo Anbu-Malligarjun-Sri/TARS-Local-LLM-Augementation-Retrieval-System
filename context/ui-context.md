@@ -55,3 +55,8 @@ Personal memory opens a dialog for facts/search, source inspection, cloud opt-in
 ## Implemented tools surface
 
 Tools & projects opens a dialog with Projects, Research, Calendar, Permissions and Activity tabs. Local writes require a review of tool name and exact arguments followed by Approve and run. Retry preserves the request key; failures are shown, never labeled completed. Source URLs, retrieval times, source type and bounded evidence are inspectable. Calendar uses an explicit file picker, timezone, import review and snapshot freshness note. Archives/completions are recoverable through Show archived/Show completed. Source/model Markdown images are disabled; links remain explicit user actions.
+
+
+## Implemented coding review surface
+
+Coding jobs opens a dialog for repository alias, objective, selected paths, verification profiles, deadline and observed token budget. Prepare creates a local snapshot; file previews and cloud disclosure consent precede the separate Approve and queue action. Job history, cancellation, truthful failure/check states, patch download and agent/sandbox evidence are available. Readiness displays actual probe output; on this host sandbox provisioning currently blocks execution. No automatic source application or cloud success badge exists.

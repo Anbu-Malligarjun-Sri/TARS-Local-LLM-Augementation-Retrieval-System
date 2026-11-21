@@ -70,7 +70,7 @@ class JobStore:
         if not row:raise JobError('Job not found')
         return self.decode(row)
     def list(self,owner):
-        with self.repository.transaction() as db:rows=db.execute('SELECT * FROM coding_jobs WHERE owner=? ORDER BY created_at DESC LIMIT 50',(owner,)).fetchall()
+        with self.repository.transaction() as db:rows=db.execute('SELECT id,owner,request_key,request_hash,spec,manifest,approval_digest,state,cancel_requested,lease,lease_until,heartbeat,NULL AS result,error,created_at,updated_at FROM coding_jobs WHERE owner=? ORDER BY created_at DESC LIMIT 50',(owner,)).fetchall()
         return [self.decode(row) for row in rows]
     def approve(self,owner,job_id,expected_digest):
         if not self.cloud_enabled:raise JobError('Cloud coding is not enabled on this server')
@@ -90,6 +90,7 @@ class JobStore:
     def claim(self,worker):
         with self.repository.transaction() as db:
             db.execute("UPDATE coding_jobs SET state='interrupted',error='Worker lease expired; create and approve a new attempt',updated_at=? WHERE state IN ('running','verifying') AND lease_until<?",(now(),now()))
+            if not self.cloud_enabled:return None
             row=db.execute("SELECT * FROM coding_jobs WHERE state='queued' AND cancel_requested=0 ORDER BY created_at LIMIT 1").fetchone()
             if not row:return None
             expires=(datetime.now(timezone.utc)+timedelta(seconds=45)).isoformat()
@@ -104,9 +105,14 @@ class JobStore:
             if not row or row['state'] not in {'running','verifying'}:return 'lease_lost'
             db.execute('UPDATE coding_jobs SET heartbeat=?,lease_until=?,updated_at=? WHERE id=? AND lease=?',(now(),(datetime.now(timezone.utc)+timedelta(seconds=45)).isoformat(),now(),job_id,worker))
         return 'cancelled' if row['cancel_requested'] else None
+    def verifying(self,job,worker):
+        with self.repository.transaction() as db:
+            changed=db.execute("UPDATE coding_jobs SET state='verifying',updated_at=? WHERE id=? AND lease=? AND state='running' AND cancel_requested=0",(now(),job['id'],worker))
+            if changed.rowcount:self.event(db,job['id'],job['owner'],'verifying','Running approved acceptance profiles')
+            else:raise JobError('Job cancelled or worker lease lost before verification')
     def finish(self,job,worker,state,result=None,error=None):
         with self.repository.transaction() as db:
-            changed=db.execute("UPDATE coding_jobs SET state=?,result=?,error=?,lease_until=NULL,updated_at=? WHERE id=? AND lease=? AND state IN ('running','verifying')",(state,json.dumps(result) if result is not None else None,error,now(),job['id'],worker))
+            changed=db.execute("UPDATE coding_jobs SET state=CASE WHEN cancel_requested=1 THEN 'cancelled' ELSE ? END,result=?,error=?,lease_until=NULL,updated_at=? WHERE id=? AND lease=? AND state IN ('running','verifying')",(state,json.dumps(result) if result is not None else None,error,now(),job['id'],worker))
             if changed.rowcount:self.event(db,job['id'],job['owner'],state,error or 'Job finished; source repository unchanged')
         return bool(changed.rowcount)
     def events(self,owner,job_id):

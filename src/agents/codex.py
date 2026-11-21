@@ -46,7 +46,7 @@ print('INSIDE_OK')'''
         workspace=Path(folder)/'workspace';artifacts=Path(folder)/'artifacts';artifacts.mkdir(exist_ok=True)
         argv=[self.executable,'exec','--ignore-user-config','--ignore-rules','--ephemeral','--skip-git-repo-check','--json','--color','never','-C',str(workspace),
               '-c','default_permissions="tars-job"',*self.policy(workspace),'-c','approval_policy="never"',
-              '-c','features.hooks=false','-c','features.apps=false','-c','features.computer_use=false','-c','features.browser_use=false',
+              '-c','features.multi_agent=false','-c','features.multi_agent_v2=false','-c','features.hooks=false','-c','features.apps=false','-c','features.computer_use=false','-c','features.browser_use=false',
               '-c','features.code_mode_host=false','-c','features.code_mode=false','-c','mcp_servers={}','-c','web_search="disabled"','-c','shell_environment_policy.inherit="none"','-o',str(artifacts/'agent-final.txt')]
         if self.model:argv+=['-m',self.model]
         argv+=['-']
@@ -78,3 +78,8 @@ print('INSIDE_OK')'''
         else:raise JobError('Unknown acceptance profile')
         result=bounded(self.sandbox_command(workspace,command),workspace,self.env(),timeout,cancel)
         return {'profile':profile,**result}
+
+
+def configured_adapter():
+    from src.utils.config import get_config
+    return CodexAdapter(executable=get_config().coding_codex_executable or None)

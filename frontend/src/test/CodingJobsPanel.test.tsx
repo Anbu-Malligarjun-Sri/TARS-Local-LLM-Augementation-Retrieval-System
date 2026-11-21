@@ -1,0 +1,30 @@
+import { afterEach,expect,it,vi } from 'vitest';
+import { cleanup,fireEvent,render,screen } from '@testing-library/react';
+import { CodingJobsPanel } from '../components/jobs/CodingJobsPanel';
+import { jobsApi,type CodingJob } from '../services/jobsApi';
+
+afterEach(()=>{cleanup();vi.restoreAllMocks();});
+it('prepares a snapshot and requires separate cloud consent before approval',async()=>{
+ const job:CodingJob={id:'job-one',state:'waiting_for_approval',spec:{repository:'tars',objective:'Fix the addition function.',paths:['src','tests'],checks:['python-syntax'],timeout_seconds:300,token_budget:20000,provider:'OpenAI via installed Codex login'},manifest:{files:[{path:'maths.py',bytes:32,sha256:'a'.repeat(64)}],total_bytes:32,head:'1234567890abcdef',dirty:false},approval_digest:'d'.repeat(64),error:null,cancel_requested:0,heartbeat:null,created_at:'2026-11-21T00:00:00Z',result:null};
+ vi.spyOn(jobsApi,'capabilities').mockResolvedValue({adapter:'codex-cloud',cloud_enabled:true,codex_installed:true,repositories:[{id:'tars',label:'TARS'}],checks:['python-syntax'],note:'Isolated jobs.'});
+ vi.spyOn(jobsApi,'list').mockResolvedValue({jobs:[]});
+ const create=vi.spyOn(jobsApi,'create').mockResolvedValue(job);
+ const approve=vi.spyOn(jobsApi,'approve').mockResolvedValue({...job,state:'queued'});
+ vi.spyOn(jobsApi,'source').mockResolvedValue({content:'def add(a,b): return a-b'});
+ render(<CodingJobsPanel/>);
+ fireEvent.click(screen.getByRole('button',{name:'Coding jobs'}));
+ await screen.findByText('Isolated jobs.');
+ fireEvent.change(screen.getByLabelText('Objective'),{target:{value:job.spec.objective}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare snapshot'}));
+ await screen.findByText('Job job-one');
+ expect(create).toHaveBeenCalledOnce();
+ expect(approve).not.toHaveBeenCalled();
+ expect(screen.getByRole('button',{name:'Approve and queue'})).toBeDisabled();
+ fireEvent.click(screen.getByText('Exact source snapshot — inspect before approval'));
+ fireEvent.click(screen.getByRole('button',{name:'maths.py (32 bytes)'}));
+ await screen.findByText('def add(a,b): return a-b');
+ fireEvent.click(screen.getByRole('checkbox',{name:/I approve sending this exact snapshot/}));
+ fireEvent.click(screen.getByRole('button',{name:'Approve and queue'}));
+ await screen.findByText(/queued: Fix the addition function/);
+ expect(approve).toHaveBeenCalledWith(job);
+});
