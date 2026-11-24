@@ -7,6 +7,8 @@ import json
 from zoneinfo import ZoneInfo
 from src.core.memory_store import Conversation, Message
 from .repository import now
+from .assertions import assertions
+import logging
 
 
 class DurableMemoryStore:
@@ -42,8 +44,20 @@ class DurableMemoryStore:
         selected = conversation_id or self.active_conversation_id or str(uuid4())
         self.create_conversation(selected)
         timestamp = now()
+        message_id = str(uuid4())
+        captured = []
         with self.repository.transaction() as db:
-            db.execute('INSERT INTO messages VALUES (?,?,?,?,?,?,?)', (str(uuid4()),selected,self.owner,role,content,timestamp,json.dumps(metadata or {})))
+            db.execute('INSERT INTO messages VALUES (?,?,?,?,?,?,?)', (message_id,selected,self.owner,role,content,timestamp,json.dumps(metadata or {})))
+            if role == 'user' and (metadata or {}).get('capture_assertions') and metadata.get('audience') == 'owner':
+                for predicate,value in assertions(content):
+                    claim = self.repository.capture(db,self.owner,predicate,value,selected,message_id)
+                    if claim:
+                        captured.append(claim)
+        for claim in captured:
+            try:
+                self.repository.index_captured(self.owner,claim)
+            except Exception:
+                logging.getLogger(__name__).warning('Memory index deferred; canonical fact available.')
         return Message(role=role,content=content,timestamp=timestamp,metadata=metadata or {})
 
     def get_history(self, conversation_id=None, max_messages=None):

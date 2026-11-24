@@ -4,6 +4,7 @@ import re
 import time
 from uuid import uuid4
 from .gateway import ToolError
+from ..personality.policy import Style, instructions
 
 
 def parse_intent(text):
@@ -18,7 +19,7 @@ def parse_intent(text):
     return None
 
 
-def answer(engine,text,conversation_id):
+def answer(engine,text,conversation_id,style=None):
     intent=parse_intent(text)
     if intent is None:return None
     from .service import get_gateway
@@ -54,7 +55,8 @@ def answer(engine,text,conversation_id):
                     'Search snippets are leads, not proof of page contents. Paraphrase; quote at most 25 words per source. '
                     'State uncertainty and avoid unsupported claims. Do not invent links. Keep the answer under 200 words.\n'
                     +json.dumps({'request':text,'sources':[{'reference':i+1,'title':source['title'][:200],'evidence':source['evidence'][:1000],'source_type':source['source_type'],'retrieved_at':source['retrieved_at']} for i,source in enumerate(sources)]},ensure_ascii=False))
-            try:summary=engine.llm.generate(prompt,[])
+            policy = instructions(text, style or Style(), 0, engine.config.tars_honesty_level)
+            try:summary=engine.llm.generate(policy + '\n' + prompt,[])
             except Exception:summary='Sources were retrieved, but the model could not summarize them. Inspect the evidence in Tools.'
             links=[]
             for index,source in enumerate(sources,1):

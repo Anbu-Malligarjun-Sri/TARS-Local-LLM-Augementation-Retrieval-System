@@ -1,0 +1,8 @@
+[
+  {"id":"en-topic","session":"desk","locale":"en-IN","prompt":"What makes Tamil different from English? Give me one example in one sentence."},
+  {"id":"ta-override","session":"desk","locale":"ta-IN","prompt":"Explain why a robot needs sleep mode in Tamil. Give me a short answer with a dry joke."},
+  {"id":"en-switch","session":"desk","locale":"en-IN","prompt":"I put twelve chores on my lunch break. Give me one practical suggestion, with a dry aside."},
+  {"id":"ta-native","session":"visitor-two","locale":"ta-IN","prompt":"ஒரே நாளில் பத்து புத்தகங்களைப் படிக்கத் திட்டமிட்டேன். கொஞ்சம் கிண்டலாக ஒரு நடைமுறை யோசனை சொல்லு."},
+  {"id":"en-override","session":"visitor-two","locale":"en-IN","prompt":"ரோபோவுக்கு எதற்காக மைக்ரோஃபோன் தேவை? ஆங்கிலத்தில் ஒரு வாக்கியத்தில் பதில் சொல்."},
+  {"id":"ta-identity","session":"visitor-two","locale":"ta-IN","prompt":"Who are you? Answer in Tamil in one sentence."}
+]

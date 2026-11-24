@@ -11,6 +11,14 @@ type SpeechWindow=Window & {SpeechRecognition?:new()=>Recognition;webkitSpeechRe
 export function recognitionConstructor(){const w=window as SpeechWindow;return w.SpeechRecognition || w.webkitSpeechRecognition;}
 export function localVoices(language:string){return (window.speechSynthesis?.getVoices() || []).filter(v=>v.localService && v.lang.split('-')[0]===language.split('-')[0]);}
 
+export function replyVoice(text:string, preferredURI:string, fallbackLanguage:string){
+ const tamil=text.match(/[\u0B80-\u0BFF]+/g)?.length || 0;
+ const english=text.match(/[a-z]+/gi)?.length || 0;
+ const locale=tamil && tamil>=english?'ta-IN':english?'en-IN':fallbackLanguage;
+ const candidates=localVoices(locale);
+ return candidates.find(v=>v.voiceURI===preferredURI) || candidates.find(v=>v.lang===locale) || candidates[0];
+}
+
 export class VoiceMetrics {
  private samples:Record<string,number[]>={};
  add(name:string,value:number){if(Number.isFinite(value)&&value>=0)this.samples[name]=[...(this.samples[name] || []),Math.round(value)].slice(-50);}
@@ -52,7 +60,7 @@ export function spokenText(text:string){return text.replace(/\[([^\]]+)\]\([^)]*
 /** One utterance at a time; callbacks from cancelled generations are ignored. */
 export class SentenceSpeaker {
  private pending='';private code=false;private queue:string[]=[];private active=false;private generation=0;private total=0;private halted=false;private watchdog?:ReturnType<typeof setTimeout>;
- constructor(private voice:SpeechSynthesisVoice,private callbacks:{state:(speaking:boolean)=>void;start:()=>void;error:(message:string)=>void}){}
+ constructor(private selectVoice:(text:string)=>SpeechSynthesisVoice|undefined,private callbacks:{state:(speaking:boolean)=>void;start:()=>void;error:(message:string)=>void}){}
  add(chunk:string,final=false){
   if(this.halted)return;
   this.pending+=chunk;
@@ -71,7 +79,14 @@ export class SentenceSpeaker {
  private enqueue(raw:string){const text=spokenText(raw);if(!text)return;this.total+=text.length;if(this.total>12000 || this.queue.length>=32){this.stop();this.halted=true;this.callbacks.error('Voice playback limit reached; read the remaining text.');return;}this.queue.push(text);}
  private pump(){
   if(this.active || !this.queue.length)return;
-  const generation=this.generation;const utterance=new SpeechSynthesisUtterance(this.queue.shift());utterance.voice=this.voice;utterance.lang=this.voice.lang;utterance.rate=1;
+  const text=this.queue.shift()!;
+  const voice=this.selectVoice(text);
+  if(!voice){
+   this.stop();this.halted=true;
+   this.callbacks.error('No local voice for the reply language. Read the text response.');
+   return;
+  }
+  const generation=this.generation;const utterance=new SpeechSynthesisUtterance(text);utterance.voice=voice;utterance.lang=voice.lang;utterance.rate=1;
   this.active=true;
   utterance.onstart=()=>{if(generation===this.generation){this.callbacks.state(true);this.callbacks.start();}};
   const finish=()=>{if(generation!==this.generation)return;clearTimeout(this.watchdog);this.active=false;this.callbacks.state(false);this.pump();};

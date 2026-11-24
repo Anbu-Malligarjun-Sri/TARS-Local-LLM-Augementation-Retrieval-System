@@ -1,5 +1,9 @@
 # Architecture context
 
+The desktop persona resolves a reply locale from the current request before adding history, retrieved material or tool evidence. The browser microphone locale affects recognition. Sentence playback selects a matching local voice using the actual reply text. The independent `demo.api:app` R1 process exposes only the visitor lifecycle. It imports no owner modules and has bounded, expiring in-process credentials. [R0 release and R1 runbook](../docs/COMPANION_R0_RELEASE.md)
+
+**Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
 Updated 2026-11-21. Distinguish CURRENT from TARGET. Detailed rationale and audit: [architecture plan](../docs/TARS_ARCHITECTURE_PLAN.md).
 
 ## Stack

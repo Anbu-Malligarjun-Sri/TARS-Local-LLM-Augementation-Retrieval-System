@@ -1,5 +1,5 @@
 import { useCallback,useEffect,useRef,useState } from 'react';
-import { Microphone,SentenceSpeaker,VoiceMetrics,localVoices,recognitionConstructor } from '@/services/voice';
+import { Microphone,SentenceSpeaker,VoiceMetrics,localVoices,recognitionConstructor,replyVoice } from '@/services/voice';
 import type { ChatMessage } from '@/services/tarsApi';
 import { useTarsStore } from '@/store/tarsStore';
 
@@ -18,9 +18,7 @@ export function useBrowserVoice(onFinal:(text:string)=>void){
  const beginReply=(requestAt=performance.now())=>{
   speaker.current?.stop();setError('');timing.current={request:requestAt,firstText:false,firstSpeech:false};
   if(useTarsStore.getState().isMuted)return;
-  const voice=voices.find(v=>v.voiceURI===voiceURI) || voices.find(v=>v.lang===language) || voices[0];
-  if(!voice){setError('No local speech voice for this language. The answer will appear as text.');return;}
-  speaker.current=new SentenceSpeaker(voice,{state:setSpeaking,start:()=>{if(!timing.current.firstSpeech){timing.current.firstSpeech=true;record('request_to_first_speech',performance.now()-timing.current.request);}},error:setError});
+  speaker.current=new SentenceSpeaker(text=>replyVoice(text,voiceURI,language),{state:setSpeaking,start:()=>{if(!timing.current.firstSpeech){timing.current.firstSpeech=true;record('request_to_first_speech',performance.now()-timing.current.request);}},error:setError});
  };
  const onEvent=(event:ChatMessage)=>{
   if(event.type==='chunk'){

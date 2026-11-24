@@ -23,7 +23,7 @@ export function CommandInput(){
   if(voice.speaking)voice.stop();
   audioTurn.current=dictated.current;
   requestStart.current=performance.now();
-  if(chat.sendMessage(text,{...style,language:voice.language as 'en-IN'|'ta-IN'})){setInput('');dictated.current=false;}else voice.stop();
+  if(chat.sendMessage(text,style)){setInput('');dictated.current=false;}else voice.stop();
  };
  submitRef.current=submit;
  const stop=()=>{voice.stop();audioTurn.current=false;void chat.cancelTurn();};
@@ -64,7 +64,7 @@ export function CommandInput(){
     <label>Speech language <select aria-label="Speech language" value={voice.language} onChange={e=>voice.setLanguage(e.target.value)} className="bg-background border rounded p-1"><option value="ta-IN">Tamil (India)</option><option value="en-IN">English (India)</option></select></label>
     <label>Local voice <select aria-label="Local voice" value={voice.voiceURI} onChange={e=>voice.setVoiceURI(e.target.value)} className="bg-background border rounded p-1"><option value="">Automatic local voice</option>{voice.voices.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}</select></label>
    </div>
-   <p>Choose the main language for each turn. Mixed Tamil/English accuracy depends on the speech service. Speak once, review the transcript, then Send. Recording stops before playback to avoid echo.</p>
+   <p>Choose the language you’ll speak into the microphone. TARS follows the language of your question, or you can ask for a reply in Tamil or English. Review the transcript before sending.</p>
    <label className="flex gap-2"><input type="checkbox" checked={autoSend} onChange={e=>setAutoSend(e.target.checked)}/>Send final transcript automatically</label>
    <button type="button" disabled={!voice.consent || !voice.supported || !chat.settingsReady} onClick={()=>{stop();voice.listen();}} className="border rounded px-3 py-2 disabled:opacity-50">{busy || voice.speaking?'Interrupt and listen':'Start microphone'}</button>
    <button type="button" onClick={stop} className="border rounded px-3 py-2 ml-2">Stop voice</button>

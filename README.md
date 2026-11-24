@@ -1,8 +1,12 @@
 <div align="center">
+
+**Product direction · 23 November 2026.** The [companion robot master roadmap](docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
   <img src="Images of TARS/Movie/1.jpeg" alt="TARS Banner" width="100%" />
 </div>
 
 # TARS Chatbot
+
+The [R0 companion release scope](docs/COMPANION_R0_RELEASE.md) records the US price target, monthly demo budget, visitor permissions and local bilingual acceptance run.
 
 Phase 5 adds audience previews, Tamil/English browser voice and a rectangular Stop control. See [voice setup and acceptance limits](docs/PHASE_5_VOICE.md). [Phase 4 coding jobs](docs/PHASE_4_CODING.md) remain blocked at live sandbox provisioning.
 

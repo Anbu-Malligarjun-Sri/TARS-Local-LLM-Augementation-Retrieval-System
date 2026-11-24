@@ -1,10 +1,18 @@
 import { afterEach,describe,it,expect,vi } from 'vitest';
-import { Microphone,SentenceSpeaker,VoiceMetrics,localVoices,type RecognitionEvent } from '../services/voice';
+import { Microphone,SentenceSpeaker,VoiceMetrics,localVoices,replyVoice,type RecognitionEvent } from '../services/voice';
 
 afterEach(()=>{vi.unstubAllGlobals();vi.useRealTimers();});
 const local={name:'Local English',lang:'en-IN',localService:true,voiceURI:'local'} as SpeechSynthesisVoice;
 class Utterance {voice?:SpeechSynthesisVoice;lang='';rate=1;onstart?:()=>void;onend?:()=>void;onerror?:()=>void;constructor(public text:string){}}
 describe('speech privacy and lifecycle',()=>{
+ it('speaks the answer language independently of the microphone and preferred voice',()=>{
+  const tamil={...local,voiceURI:'tamil',lang:'ta-IN'};
+  vi.stubGlobal('speechSynthesis',{getVoices:()=>[local,tamil]});
+  expect(replyVoice('Here is your answer.', 'tamil','ta-IN')).toBe(local);
+  expect(replyVoice('ரோபோ எப்படி வேலை செய்கிறது?', 'local','en-IN')).toBe(tamil);
+  vi.stubGlobal('speechSynthesis',{getVoices:()=>[local,{...tamil,localService:false}]});
+  expect(replyVoice('வணக்கம்.', 'local','en-IN')).toBeUndefined();
+ });
  it('selects only local voices matching the requested language',()=>{
   vi.stubGlobal('speechSynthesis',{getVoices:()=>[local,{...local,localService:false},{...local,lang:'ta-IN'}]});
   expect(localVoices('en-IN')).toEqual([local]);expect(localVoices('ta-IN')).toHaveLength(1);
@@ -12,7 +20,7 @@ describe('speech privacy and lifecycle',()=>{
  it('streams sentences, suppresses split code fences and cancels late audio callbacks',()=>{
   vi.useFakeTimers();const utterances:Utterance[]=[];const cancel=vi.fn();
   vi.stubGlobal('SpeechSynthesisUtterance',Utterance);vi.stubGlobal('speechSynthesis',{speak:(u:Utterance)=>utterances.push(u),cancel});
-  const callbacks={state:vi.fn(),start:vi.fn(),error:vi.fn()};const speaker=new SentenceSpeaker(local,callbacks);
+  const callbacks={state:vi.fn(),start:vi.fn(),error:vi.fn()};const speaker=new SentenceSpeaker(()=>local,callbacks);
   speaker.add('Hello. This is ');expect(utterances[0].text).toBe('Hello.');utterances[0].onstart?.();
   speaker.add('useful. ``');speaker.add('`python\nsecret = 123\n```\nRead [this](https://example.invalid). ',true);
   utterances[0].onend?.();expect(utterances[1].text).toBe('This is useful.');utterances[1].onend?.();

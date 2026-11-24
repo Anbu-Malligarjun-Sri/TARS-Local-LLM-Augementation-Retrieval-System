@@ -1,5 +1,7 @@
 # UI context
 
+**Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
 ## Theme
 
 Retain the existing dark terminal/HUD aesthetic: amber accents, restrained silver surfaces and a TARS monolith companion. Increase clarity and accessibility as real tools/memory/phone controls arrive. The UI should communicate actual operational state; cosmetic animation must not imply real microphone capture or successful model/database connectivity.
@@ -65,3 +67,7 @@ Coding jobs opens a dialog for repository alias, objective, selected paths, veri
 ## Implemented Phase 5 surfaces
 
 The send rectangle becomes a labeled amber STOP during thinking/streaming, capture or playback. It stops local audio/display and requests server cancellation. Voice settings includes Tamil/English language, local voice, non-persistent speech-provider consent, default transcript review, optional automatic final send, partial/error/status output, interrupt-and-listen and bounded measured timing statistics. No automatic recording or remote TTS fallback. The command palette opens settings, not the microphone. Audience selector creates separate owner/parent/friend/professional/unknown previews; friend playful consent is explicit. Preview label discloses no owner context/tools. Directness and Restraint sliders do not change truthfulness/access rules.
+
+## Desktop voice update · 24 November 2026
+
+The speech language menu is the microphone input locale. Typed and reviewed voice turns use automatic reply language. A request for Tamil or English applies to the current answer. Local playback follows the generated sentence and reports missing voices in the UI.

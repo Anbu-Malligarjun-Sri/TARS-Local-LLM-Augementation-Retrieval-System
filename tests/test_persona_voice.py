@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from uuid import uuid4
 import pytest
-from src.personality.policy import Style, resolve
+from src.personality.policy import Style, instructions, resolve
 from src.personality.response_generator import ResponseGenerator
 from src.memory.repository import Repository
 from src.memory.conversations import DurableMemoryStore
@@ -17,6 +17,57 @@ from test_local_pipeline import FakeLLM
 from test_foundation import client
 
 CASES=json.loads((Path(__file__).parent/'fixtures/persona_heldout.json').read_text(encoding='utf-8'))
+
+
+def test_live_evaluation_flags_malformed_tamil_even_when_language_matches():
+    from scripts.check_companion import review_reply
+    assert review_reply('வணக்கம் TARS. எப்படி இருக்கிறாய்?', 'ta-IN') == (True, [])
+    assert review_reply('இன்று نகாலை', 'ta-IN') == (True, ['mixed_script_word'])
+    assert review_reply('Entirely English.', 'ta-IN') == (False, [])
+
+
+@pytest.mark.parametrize(('text','locale'), [
+    ('How does a robot listen?', 'en-IN'),
+    ('Do you speak Tamil?', 'en-IN'),
+    ('Explain a trend in Tamil cinema.', 'en-IN'),
+    ('What does "please explain in Tamil" mean?', 'en-IN'),
+    ('Can you explain this in Tamil please?', 'ta-IN'),
+    ('In Tamil, why do robots use sensors?', 'ta-IN'),
+    ('Write a greeting in Tamil. Actually, answer in English.', 'en-IN'),
+    ('Describe it in English, not in Tamil.', 'en-IN'),
+    ('ஒரு சின்ன நகைச்சுவை சொல்லு.', 'ta-IN'),
+    ('Idhu eppadi velai seiyum?', 'ta-IN'),
+    ('இதை ஆங்கிலத்தில் சொல்லு.', 'en-IN'),
+])
+def test_reply_language_for_current_request(text,locale):
+    assert resolve(text, Style())['language'] == locale
+
+
+def test_language_directive_overrides_explicit_api_preference():
+    assert resolve('Answer in Tamil.', Style(language='en-IN'))['language'] == 'ta-IN'
+    assert resolve('Help.', Style(language='ta-IN'))['language'] == 'ta-IN'
+
+
+def test_tamil_humor_respects_audience_and_subject():
+    casual = 'ஒரே நாளில் பத்து புத்தகமா?'
+    assert 'idiomatic Tamil' in instructions(casual, Style(), .6, .9)
+    for style in (Style(audience='parent'), Style(audience='friend', playful=False)):
+        assert resolve(casual,style)['humor'] == 0
+    assert resolve(casual,Style(audience='friend',playful=True))['humor'] == 60
+    assert resolve('எனக்கு நெஞ்சு வலி.', Style())['humor'] == 0
+    assert resolve('ஒரு நிரல் எழுதுங்கள்.', Style())['humor'] == 0
+
+
+def test_language_switch_reaches_model_after_shortcut_in_same_session(tmp_path):
+    model=FakeLLM()
+    engine=TARSEngine(config=TARSConfig(_env_file=None),llm_handler=model,
+                      memory_store=DurableMemoryStore(Repository(tmp_path/'language.db')),use_rag=False)
+    session=str(uuid4())
+    assert "TARS" in engine.chat('Who are you?',conversation_id=session)
+    engine.chat('Who are you? Answer in Tamil.',conversation_id=session)
+    assert '"language": "ta-IN"' in model.prompts[-1][0]
+    list(engine.chat_stream('What does exit mean in Python?',conversation_id=session))
+    assert '"language": "en-IN"' in model.prompts[-1][0]
 
 @pytest.mark.parametrize('case',CASES)
 def test_heldout_policy(case):

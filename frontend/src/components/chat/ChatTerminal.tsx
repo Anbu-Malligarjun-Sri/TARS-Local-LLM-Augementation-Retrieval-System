@@ -8,11 +8,12 @@ import { CommandInput } from './CommandInput';
 export function ChatTerminal() {
   const { messages, status } = useTarsStore();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const follow = useRef(true);
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const pane = scrollRef.current;
+    if (pane && follow.current) pane.scrollTop = pane.scrollHeight;
   }, [messages, status]);
 
   return (
@@ -35,7 +36,8 @@ export function ChatTerminal() {
       {/* Messages Area - Scrollable */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent min-h-0"
+        onScroll={({currentTarget: pane}) => { follow.current = pane.scrollHeight - pane.clientHeight - pane.scrollTop < 80; }}
+        className="flex-1 overscroll-contain overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent min-h-0"
       >
         {messages.length === 0 ? (
           <WelcomeScreen />
@@ -67,7 +69,7 @@ export function ChatTerminal() {
         )}
         
         {/* Scroll anchor */}
-        <div ref={messagesEndRef} />
+        
       </div>
       
       {/* Input Area - Fixed at bottom */}

@@ -1,3 +1,4 @@
+import { MemoryNetwork } from './MemoryNetwork';
 import { useCallback, useState } from 'react';
 import { Database, Search, Download, RefreshCw, Pencil, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -48,7 +49,7 @@ export function MemoryPanel() {
         </div>
         <p role="alert" className="text-destructive">{error}</p>
         <p role="status" className="text-sm text-muted-foreground">{notice}</p>
-        {tab==='graph' ? <div className="overflow-auto"><table className="w-full text-left text-sm"><caption className="text-left py-2">Directed relationships from active, authorized facts</caption><thead><tr><th>Subject</th><th>Relationship →</th><th>Object</th></tr></thead><tbody>{graph.edges.map(edge => <tr key={edge.claim_id} className="border-t border-border"><td className="p-2">{edge.source}</td><td>{edge.relationship}</td><td>{edge.target}</td></tr>)}</tbody></table>{!graph.edges.length && <p>No relationships stored.</p>}</div> : <>
+        {tab==='graph' ? <div className="overflow-auto"><MemoryNetwork graph={graph} inspect={id=>void run(async()=>setDetail(await memoryApi.detail(id)))}/><table className="w-full text-left text-sm"><caption className="text-left py-2">Directed relationships from active, authorized facts</caption><thead><tr><th>Subject</th><th>Relationship →</th><th>Object</th></tr></thead><tbody>{graph.edges.map(edge => <tr key={edge.claim_id} className="border-t border-border"><td className="p-2">{edge.source}</td><td>{edge.relationship}</td><td>{edge.target}</td></tr>)}</tbody></table>{!graph.edges.length && <p>No relationships stored.</p>}</div> : <>
           <form className="flex gap-2" onSubmit={event => {event.preventDefault(); void run(async () => { if (query.trim()) setClaims((await memoryApi.search(query)).claims); else await refresh(); });}}>
             <input className={input} aria-label="Search personal memory" placeholder="Search your memories" value={query} onChange={e=>setQuery(e.target.value)}/><button className={button} disabled={busy}><Search size={16}/><span className="sr-only">Search</span></button>
           </form>
@@ -67,7 +68,7 @@ export function MemoryPanel() {
             <p className="text-xs text-muted-foreground">{claim.verification} · {claim.cloud_allowed ? 'Cloud permitted' : 'Local only'} · source {claim.source_id}</p>
             <div className="flex flex-wrap gap-2"><button className={button} disabled={busy} onClick={()=>void run(async ()=>setDetail(await memoryApi.detail(claim.id)))}>View source</button><button className={button} disabled={busy} aria-label={`Correct ${claim.subject} ${claim.predicate}`} onClick={()=>{setEditing(claim.id);setForm({subject:claim.subject,predicate:claim.predicate,value:claim.value,audiences:claim.audiences,sensitivity:claim.sensitivity,cloud_allowed:claim.cloud_allowed,valid_to:claim.valid_to});}}><Pencil size={16}/></button><button className={button} disabled={busy} aria-label={`Forget ${claim.subject} ${claim.predicate}`} onClick={()=>setPendingForget(claim.id)}><Trash2 size={16}/></button></div>
             {pendingForget===claim.id && <div className="space-y-2"><p>Forget this fact and its correction history? Existing conversation transcripts and previous backups remain until separately removed.</p><button className={button} disabled={busy} onClick={()=>void run(async ()=>{const result=await memoryApi.forget(claim.id);setNotice(result.retention_note);setPendingForget(undefined);setDetail(undefined);await refresh();})}>Forget this memory</button><button className={button} onClick={()=>setPendingForget(undefined)}>Keep memory</button></div>}
-          </article>)}{!claims.length && <p className="text-muted-foreground">No matching memories. Add an explicit fact to get started.</p>}</div>
+          </article>)}{!claims.length && <p className="text-muted-foreground">Share a fact such as “My name is Maya” in owner chat, or add one here.</p>}</div>
         </>}
         {detail && <section className="border border-border rounded p-3 text-sm break-all"><h3>Memory provenance</h3><p>Source: {detail.source_id} ({detail.source_kind})</p><p>Observed: {detail.created_at}</p><p>State: {detail.state}</p><pre className="whitespace-pre-wrap">{detail.source_content}</pre><button className={button} onClick={()=>setDetail(undefined)}>Close source</button></section>}
       </DialogContent>

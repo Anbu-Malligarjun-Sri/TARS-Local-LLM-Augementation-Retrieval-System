@@ -157,7 +157,8 @@ class ResponseGenerator:
         # output: that corrupts code, citations, audience tone and spoken replies.
         return response
     
-    def format_time_response(self) -> str:
+    @staticmethod
+    def format_time_response() -> str:
         from zoneinfo import ZoneInfo
         current_time = datetime.now(ZoneInfo('Asia/Calcutta')).strftime('%I:%M %p')
         return f"It's {current_time} IST."

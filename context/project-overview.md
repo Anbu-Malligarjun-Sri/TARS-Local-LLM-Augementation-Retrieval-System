@@ -1,5 +1,9 @@
 # TARS personal intelligence
 
+The companion targets US buyers at USD 49–125. The demo operating target is INR 2,000/month with a hard ceiling of INR 3,000/month. [R0 decisions and release gates](../docs/COMPANION_R0_RELEASE.md)
+
+**Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
 ## Overview
 
 Build a persistent personal assistant for the owner: JARVIS-like usefulness with TARS-inspired dry humor. It helps with routines, research and projects, delegates programming to coding agents, converses through text/voice, and eventually handles inbound and approved outbound phone calls. Identity, personal memory and permission policy belong to TARS's application layer, independent of the selected local or cloud model.

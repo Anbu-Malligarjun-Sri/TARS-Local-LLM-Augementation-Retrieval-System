@@ -7,12 +7,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="min-h-screen w-full flex bg-background noise-overlay scanlines">
+    <div className="h-[100dvh] overflow-hidden w-full flex bg-background noise-overlay scanlines">
       {/* Sidebar - The Monolith */}
       <MonolithSidebar />
       
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
         {children}
       </main>
       

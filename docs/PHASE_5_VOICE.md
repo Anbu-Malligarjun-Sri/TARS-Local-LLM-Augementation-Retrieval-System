@@ -47,3 +47,7 @@ The voice settings panel reports actual page-session timing samples (up to 50 pe
 Run `python -m pytest tests -q` and frontend `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build`. Preserve the existing lint/build advisory baseline. No schema migration is required for persona: audience is recorded in existing user-message metadata. Back up canonical memory/foundation SQLite files before restarting the backend. Rollback stops the updated backend and reverts source; preserve conversations/backups and runtime artifacts.
 
 Final verification: 80 backend tests, 19 frontend tests, TypeScript/lint/build passed (seven existing lint warnings). A live authenticated Stop probe before first token acknowledged in 32 ms (one sample), then drained the provider safely. Its synthetic turn was removed afterward; original conversation JSON hashes were unchanged. The backend and frontend are running locally.
+
+## Bilingual update · 24 November 2026
+
+Choose **Speech language** for microphone recognition. A typed or dictated chat turn follows the language of the current question. Asking for an explanation in Tamil or English overrides that default for the turn. Speech playback selects a matching local voice from the answer text. Tamil dry humor follows the owner/friend, audience and sensitivity settings. Try the synthetic conversations in the [R0 release scope](COMPANION_R0_RELEASE.md).

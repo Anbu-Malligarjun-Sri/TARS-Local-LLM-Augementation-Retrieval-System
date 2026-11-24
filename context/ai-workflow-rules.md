@@ -1,5 +1,7 @@
 # AI workflow rules
 
+**Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
 ## Approach
 
 Read the root agent entry file and six context files before implementation. Use [build plan](specs/00-build-plan.md), then the current feature spec. Treat [architecture audit](../docs/TARS_ARCHITECTURE_PLAN.md) as the baseline assessment; source code and verified behavior determine current truth.

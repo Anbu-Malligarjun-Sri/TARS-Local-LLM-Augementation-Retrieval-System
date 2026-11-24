@@ -8,6 +8,7 @@ import json
 import math
 import re
 import sqlite3
+from .assertions import terms as memory_terms
 
 
 def now():
@@ -119,6 +120,36 @@ class Repository:
             self._enqueue(db,owner,claim_id,'upsert')
         return self.get_claim(owner,claim_id)
 
+    def capture(self, db, owner, predicate, value, conversation, message):
+        # The transcript and derived assertion share one transaction.
+        rows = db.execute("SELECT c.id,c.value,s.kind FROM claims c JOIN source_events s ON s.id=c.source_id WHERE c.owner=? AND c.subject='Me' AND c.predicate=? AND c.state='active'", (owner,predicate)).fetchall()
+        if any(row['value'].casefold() == value.casefold() for row in rows):
+            return None
+        prior = next((r['id'] for r in rows if r['kind']=='conversation_assertion'),None) if predicate in ('name','lives_in') else None
+        stamp, claim = now(), str(uuid4())
+        if prior:
+            db.execute("UPDATE claims SET state='superseded',valid_to=? WHERE id=?", (stamp,prior))
+            db.execute("DELETE FROM vectors WHERE claim_id=?", (prior,))
+            db.execute("DELETE FROM edges WHERE claim_id=?", (prior,))
+            self._enqueue(db,owner,prior,'delete')
+        source = self._event(db,owner,'conversation_assertion',json.dumps(dict(conversation_id=conversation,message_id=message,predicate=predicate,value=value),ensure_ascii=False))
+        db.execute('INSERT INTO claims VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                   (claim,owner,'Me',predicate,value,source,stamp,stamp,None,1.0,'owner_asserted','private','["owner"]',0,'active',prior))
+        self._enqueue(db,owner,claim,'upsert')
+        return claim
+
+    def index_captured(self,owner,claim_id):
+        claim = self.get_claim(owner,claim_id)
+        vector = self.embedder(' '.join((claim['subject'],claim['predicate'],claim['value'])))
+        if len(vector)!=self.dimension or not all(math.isfinite(v) for v in vector):
+            raise ValueError('Invalid vector')
+        with self.transaction() as db:
+            row = db.execute("SELECT state FROM claims WHERE owner=? AND id=?", (owner,claim_id)).fetchone()
+            if row and row['state']=='active':
+                db.execute('INSERT INTO vectors VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING',(claim_id,owner,self.embedding_model,self.dimension,json.dumps(vector)))
+                db.execute('INSERT INTO edges VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING',(claim_id,owner,claim['subject'],claim['predicate'],claim['value']))
+                db.execute("UPDATE outbox SET processed=1 WHERE owner=? AND claim_id=? AND operation='upsert'",(owner,claim_id))
+
     def get_claim(self, owner, claim_id):
         with self.transaction() as db:
             row = db.execute('SELECT c.*, s.kind AS source_kind, s.content AS source_content FROM claims c JOIN source_events s ON s.id=c.source_id WHERE c.owner=? AND c.id=?', (owner,claim_id)).fetchone()
@@ -206,7 +237,7 @@ class Repository:
 
     def retrieve(self, owner, query, audience='owner', cloud=False, limit=6):
         claims = self.claims(owner,audience,cloud)
-        terms = set(re.findall(r'\w+',query.lower()))
+        terms = memory_terms(query)
         try:
             query_vector = (self.query_embedder or self.embedder)(query)
         except Exception:
@@ -218,7 +249,7 @@ class Repository:
             vectors = {row['claim_id']:row for row in db.execute('SELECT * FROM vectors WHERE owner=? AND model=? AND dimension=?', (owner,self.embedding_model,self.dimension)).fetchall()}
         scored = []
         for claim in claims:
-            words = set(re.findall(r'\w+', ' '.join((claim['subject'],claim['predicate'],claim['value'])).lower()))
+            words = memory_terms(' '.join((claim['subject'],claim['predicate'],claim['value'])))
             exact = len(terms & words)
             vector = vectors.get(claim['id'])
             similarity = sum(a*b for a,b in zip(query_vector,json.loads(vector['vector']))) if vector else 0

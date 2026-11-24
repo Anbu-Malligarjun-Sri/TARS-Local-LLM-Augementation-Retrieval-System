@@ -1,16 +1,26 @@
 # Progress tracker
 
-Last updated: 2026-11-21 (Asia/Calcutta).
+**Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
+Last updated: 2026-11-24 (Asia/Calcutta).
 
 ## Current phase
+
+Companion R0 release scope and bilingual desktop baseline delivered. R1 local visitor-session service implemented. Open-ended sales-demo quality, real-browser audio and public deployment remain open. [Release record and measured results](../docs/COMPANION_R0_RELEASE.md)
 
 Phase 5 units 14–15 local implementation delivered: versioned audience persona, isolated tone previews, opt-in Tamil/English browser recognition, sentence-level local speech and a rectangular Stop control. Real microphone/acoustic/code-switching acceptance remains pending. Phase 4 live coding execution remains blocked by sandbox provisioning; earlier external database/quality gates remain open.
 
 ## Current goal
 
+The current companion increment is a private bilingual reference and a separate short-lived visitor demo for US buyers. Hardware price target USD 49–125. INR 2,000/month operating target and INR 3,000 hard demo ceiling. USD 99 is a worksheet assumption only.
+
 Build a persistent TARS personal intelligence for routines/projects, interchangeable local/cloud models, graph memory, audience-aware personality, coding delegation and eventual phone assistance.
 
 ## Completed
+
+- **24 November 2026, R0 / first R1 unit.** Removed the browser microphone locale from outgoing chat style. Persona v2 resolves the current request, honors explicit English/Tamil switches, scopes examples and dry humor to the answer language, and narrows canned English shortcuts. Playback selects compatible local voices from each sentence. Updated operator docs and added isolated synthetic bilingual acceptance scripts.
+- Established the visitor allowlist, account/retention boundaries, asset inventory, cost worksheet and public quality gate. Implemented an independent loopback visitor service with 15-minute fixed expiry, capped admission, host/origin checks and idempotent begin/end. Exercised the documented PowerShell create/read/end flow on a temporary listener. Visitor inference, speech, UI, billing and deployment remain future R1 units.
+- Verification: 98 backend and 21 frontend tests passed. Frontend typecheck and production build passed, lint completed with seven existing warnings. Confirmed HTTP 200 on desktop UI and authenticated health and the running schema's automatic locale. Local R0 Qwen run: 6/6 dominant scripts matched. Manual review caught inaccurate content, one malformed mixed-script word and an invented estimate. Saved synthetic timing/evaluation results in the release record. Browser audio remains mocked. No public deployment or paid provider was used.
 
 - Reviewed backend/provider/RAG/memory/personality/voice/API/CLI and frontend chat/state/settings/status architecture.
 - Parsed dataset inventory: 17 YAML files, 526 entries, 407 unique exact Q&A pairs.
@@ -36,12 +46,12 @@ Phase 5 owner-browser acceptance: actual recognition availability, microphone pe
 
 ## Next up
 
-Refresh localhost:8081. Test Stop before the first token and mid-response. Open Voice settings, select Tamil/English, review speech-provider consent and start the microphone explicitly. Inspect/correct the final transcript before Send, or opt into automatic final-transcript send. Use audience previews in separate sessions. See `docs/PHASE_5_VOICE.md`; collect real voice timing/accuracy evidence before phone deployment. Phase 6 is not started.
+Implement the visitor turn/Stop contract with a synthetic provider, then the spend ledger. Compare bilingual model quality on the R0 fixtures. R2 board selection can proceed independently. Paid preorder and buyer isolation gates are in the master roadmap.
 
 ## Open questions
 
 - What CPU/RAM/GPU/VRAM and always-on host are available?
-- What monthly infrastructure/model/phone spend is acceptable?
+- The demo target is INR 2,000/month with an INR 3,000 ceiling. Future phone and buyer service budgets remain open.
 - Which personal data may go to which cloud providers?
 - Which spoken languages, voice and contact language preferences are needed?
 - Which phone country/carrier and number arrangement: separate assistant number, forwarding or porting?

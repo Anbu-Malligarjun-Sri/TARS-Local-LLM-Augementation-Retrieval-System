@@ -21,7 +21,7 @@ export function MonolithSidebar() {
       animate={{ width: isCollapsed ? 56 : 300 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        "relative h-full flex flex-col",
+        "relative h-full min-h-0 shrink-0 flex flex-col",
         "bg-gradient-sidebar border-r border-border",
         "noise-overlay"
       )}
@@ -62,7 +62,7 @@ export function MonolithSidebar() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+          className="flex-1 min-h-0 overscroll-contain overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
         >
           <MemoryPanel />
           <ToolsPanel />

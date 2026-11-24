@@ -84,7 +84,7 @@ class TARSEngine:
             if prior and any(m.metadata.get("local_only_context") for m in prior.messages):
                 raise PermissionError("This conversation contains local-only memory; use local routing or start a new conversation")
         self.memory.add_message("user", user_input, conversation_id=conversation_id,
-                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud, "audience": style.audience})
+                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud, "audience": style.audience, "capture_assertions": style.audience == "owner"})
         history = self.memory.get_history(
             conversation_id=conversation_id,
             max_messages=20,
@@ -113,7 +113,10 @@ class TARSEngine:
                     f"User question: {user_input}"
                 )
 
-        return instructions(raw_input, style, self.config.tars_humor_level, self.config.tars_honesty_level) + "\nRequest and reference data:\n" + user_input, history
+        policy = instructions(raw_input, style, self.config.tars_humor_level, self.config.tars_honesty_level)
+        if style.audience == "owner" and re.search(r"\b(?:time|clock)\b|மணி|நேரம்", raw_input, re.I):
+            policy += f"Current local clock: {ResponseGenerator.format_time_response()}\n"
+        return policy + "\nRequest and reference data:\n" + user_input, history
 
     def chat(
         self,
@@ -142,9 +145,9 @@ class TARSEngine:
         # Only explicit owner read intents can invoke Phase 3 tools. Source/model
         # output is never parsed as a tool request or an approval.
         from ..tools.chat import answer as tool_answer
-        special_response = tool_answer(self, user_input, conversation_id) if style.audience == "owner" else None
+        special_response = tool_answer(self, user_input, conversation_id, style) if style.audience == "owner" else None
         if special_response is None and style.audience == "owner":
-            special_response = self._handle_special_commands(user_input)
+            special_response = self._handle_special_commands(user_input, style)
         if special_response:
             self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             self.memory.add_message("assistant", special_response, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
@@ -190,9 +193,9 @@ class TARSEngine:
         # Only explicit owner read intents can invoke Phase 3 tools. Source/model
         # output is never parsed as a tool request or an approval.
         from ..tools.chat import answer as tool_answer
-        special_response = tool_answer(self, user_input, conversation_id) if style.audience == "owner" else None
+        special_response = tool_answer(self, user_input, conversation_id, style) if style.audience == "owner" else None
         if special_response is None and style.audience == "owner":
-            special_response = self._handle_special_commands(user_input)
+            special_response = self._handle_special_commands(user_input, style)
         if special_response:
             self.memory.add_message("user", user_input, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
             self.memory.add_message("assistant", special_response, conversation_id=conversation_id, metadata={"local_only_context": not self.config.allow_cloud or user_input.lower().startswith("/remember ")})
@@ -213,7 +216,7 @@ class TARSEngine:
         # Store the full response
         self.memory.add_message("assistant", full_response, conversation_id=conversation_id)
     
-    def _handle_special_commands(self, user_input: str) -> str | None:
+    def _handle_special_commands(self, user_input: str, style: Style) -> str | None:
         """Handle special commands and queries."""
         lower_input = user_input.lower()
         if lower_input.startswith("/remember "):
@@ -226,25 +229,29 @@ class TARSEngine:
             claim = repository.add_claim(self.memory.owner, *parts)
             return f"Remembered. Fact ID: {claim['id']}. You can inspect, correct or forget it in Personal memory."
         
-        # Time queries
-        if any(phrase in lower_input for phrase in ["what time", "time now", "current time", "what's the time"]):
+        # Only complete English shortcuts get canned English replies. Qualified
+        # questions (e.g. "Who are you? Answer in Tamil") need the turn policy.
+        if style.language == "ta-IN":
+            return None
+        question = lower_input.rstrip(' .!?')
+        if question in {"what time is it", "time now", "current time", "what's the time"}:
             return self.personality.format_time_response()
         
         # Exit commands
-        if re.search(r"\b(bye|goodbye|exit|quit)\b", lower_input):
+        if question in {"bye", "goodbye", "exit", "quit"}:
             return self.personality.format_farewell()
         
         # Settings commands
-        if "humor" in lower_input and "setting" in lower_input:
+        if re.fullmatch(r"(?:what(?:'s| is) your )?humor setting", question):
             humor_pct = int(self.config.tars_humor_level * 100)
             return f"My humor setting's at {humor_pct}%. Want me to dial it up? I max out at 100%, but that gets... intense."
         
-        if "honesty" in lower_input and "setting" in lower_input:
+        if re.fullmatch(r"(?:what(?:'s| is) your )?honesty setting", question):
             honesty_pct = int(self.config.tars_honesty_level * 100)
             return f"Honesty's at {honesty_pct}%. Any higher and I start telling you things you don't want to hear."
         
         # Identity questions
-        if re.search(r"\bwho are you\b|\bwhat are you\b|\byour name\b", lower_input):
+        if question in {"who are you", "what are you", "what is your name", "what's your name"}:
             return self._get_identity_response()
         
         return None
