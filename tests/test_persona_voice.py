@@ -36,7 +36,7 @@ def test_live_evaluation_flags_malformed_tamil_even_when_language_matches():
     ('Write a greeting in Tamil. Actually, answer in English.', 'en-IN'),
     ('Describe it in English, not in Tamil.', 'en-IN'),
     ('ஒரு சின்ன நகைச்சுவை சொல்லு.', 'ta-IN'),
-    ('Idhu eppadi velai seiyum?', 'ta-IN'),
+    ('Idhu eppadi velai seiyum?', 'ta-Latn'),
     ('இதை ஆங்கிலத்தில் சொல்லு.', 'en-IN'),
 ])
 def test_reply_language_for_current_request(text,locale):

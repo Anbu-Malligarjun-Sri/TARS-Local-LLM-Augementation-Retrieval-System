@@ -173,7 +173,11 @@ async def private_access(request: Request, call_next):
         return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
     bucket.append(now)
     length = request.headers.get("content-length", "0")
-    if not length.isdigit() or int(length) > 65536:
+    limits = {'/api/media/transcribe':640000, '/api/media/faces/enroll':150000, '/api/media/faces/match':150000}
+    limit_bytes = limits.get(request.url.path,65536)
+    if request.url.path in limits and 'content-length' not in request.headers:
+        return JSONResponse({"detail":"Content length required"},status_code=411)
+    if not length.isdigit() or int(length) > limit_bytes:
         return JSONResponse({"detail": "Payload too large"}, status_code=413)
     origin = request.headers.get("origin")
     if origin and origin not in ORIGINS:
@@ -508,6 +512,8 @@ def run_api(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
 
 
 # Routes inherit the application's owner authentication/origin middleware.
+from src.interfaces.media_api import router as media_router
+app.include_router(media_router)
 from src.interfaces.memory_api import router as memory_router
 app.include_router(memory_router)
 from src.interfaces.tools_api import router as tools_router

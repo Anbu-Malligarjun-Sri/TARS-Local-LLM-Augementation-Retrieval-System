@@ -4,7 +4,9 @@ import json
 import re
 from pydantic import BaseModel, ConfigDict, StrictBool
 
-VERSION = 'tars-persona-2'
+from .tanglish import is_tanglish
+
+VERSION = 'tars-persona-3'
 
 LANGUAGE_RULE = (
     "Choose the response language anew for the current user request. An explicit request to answer, "
@@ -19,16 +21,16 @@ class Style(BaseModel):
     model_config = ConfigDict(extra='forbid', frozen=True)
     audience: Literal['owner', 'parent', 'friend', 'professional', 'unknown'] = 'owner'
     playful: StrictBool = False
-    language: Literal["auto", "en-IN", "ta-IN"] = "auto"
+    language: Literal["auto", "en-IN", "ta-IN", "ta-Latn"] = "auto"
 
 
 def reply_language(text: str, preference: str = 'auto') -> str:
     """Resolve common directives first. Use the question around quotations as the fallback."""
     question = re.sub(r'```[\s\S]*?```|`[^`]*`|"[^"]*"|“[^”]*”', ' ', text).casefold()
     directives = re.compile(
-        r'\b(?:in(?:to)?|using)\s+(?:simple\s+)?(tamil|english)\b'
-        r'|(?:^|[.!?,]\s*|\bplease\s+)(?:speak|use)\s+(?:simple\s+)?(?:tamil|english)\b'
-        r'|\b(tamil|english)\s+(?:please\b|only\b|la\s+(?:sollu|sollunga)\b)'
+        r'\b(?:in(?:to)?|using)\s+(?:simple\s+)?(tanglish|tamil|english)\b'
+        r'|(?:^|[.!?,]\s*|\bplease\s+)(?:speak|use)\s+(?:simple\s+)?(?:tanglish|tamil|english)\b'
+        r'|\b(tanglish|tamil|english)\s+(?:please\b|only\b|la\s+(?:sollu|sollunga)\b)'
         r'|(தமிழில்|தமிழிலேயே|தமிழ்ல|ஆங்கிலத்தில்|ஆங்கிலத்திலேயே|இங்கிலீஷ்ல)'
     )
     for match in reversed(list(directives.finditer(question))):
@@ -44,13 +46,17 @@ def reply_language(text: str, preference: str = 'auto') -> str:
         if match.group(1) and re.match(r'(cinema|music|literature|culture|movies?|films?|history)\b', after):
             continue
         name = match.group(0)
+        if 'tanglish' in name:
+            return 'ta-Latn'
         return 'ta-IN' if 'tamil' in name or 'தமிழ' in name else 'en-IN'
     if preference != 'auto':
         return preference
     tamil = len(re.findall(r'[\u0b80-\u0bff]+', question))
     english = len(re.findall(r'[a-z]+', question))
-    if (tamil and tamil >= english) or re.search(r'\b(?:vanakkam|ep[pb]adi|enna|sollunga|sollu|venum|pannalam)\b', question):
+    if tamil and tamil >= english:
         return 'ta-IN'
+    if not tamil and (is_tanglish(question) or re.search(r'\b(?:vanakkam|ep[pb]adi|enna|sollunga|sollu|venum|pannalam)\b', question)):
+        return 'ta-Latn'
     return 'en-IN'
 
 
@@ -96,7 +102,13 @@ def instructions(text: str, style: Style, humor: float, directness: float) -> st
                  'situation and keep it brief. Style sample for an overfull schedule: '
                  'இந்தத் திட்டத்துக்கு நாளில் இன்னும் இரண்டு மணி நேரம் தேவைப்படும் போல. '
                  'Use original wording suited to the question.\n')
-    if policy['language'] == 'ta-IN':
+    if policy['language'] == 'ta-Latn':
+        base += ('Reply in conversational Tamil written with Latin letters (Tanglish). Keep technical English words natural. '
+                 'Use Latin script for the whole reply unless quoting requested text. '
+                 'Example: "Konjam help venum" → "Edhula udhavi venum? Oru example sollu." ')
+        if policy['humor']:
+            base += 'Keep any dry joke in Tanglish too. Example tone: "Meedhi list odipogaadhu." '
+    elif policy['language'] == 'ta-IN':
         base += 'பேச்சு வழக்கில், எளிய தமிழில் நேரடியாகப் பதில் சொல்லுங்கள். நகைச்சுவையும் தமிழிலேயே இருக்கட்டும்.\n'
     else:
         base += 'Write the answer and any dry aside in English.\n'

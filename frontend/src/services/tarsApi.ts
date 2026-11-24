@@ -68,7 +68,7 @@ export interface RagStats {
   embedding_dimension: number;
 }
 
-export interface ChatStyle {audience:'owner'|'parent'|'friend'|'professional'|'unknown';playful:boolean;language?:'auto'|'en-IN'|'ta-IN'}
+export interface ChatStyle {audience:'owner'|'parent'|'friend'|'professional'|'unknown';playful:boolean;language?:'auto'|'en-IN'|'ta-IN'|'ta-Latn'}
 export async function cancelChatTurn(id:string){
   const response=await apiFetch(`${API_BASE}/api/turns/${id}/cancel`,{method:'POST'});
   if(!response.ok)throw new Error('Server cancellation was not acknowledged. Local playback and display have stopped.');
