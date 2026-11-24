@@ -13,6 +13,13 @@ PACKS = [('asr-models', 'sherpa-onnx-whisper-tiny'), ('tts-models', 'vits-piper-
 
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
+    lexicon = ROOT/'lexicon-en-us.txt'
+    if not lexicon.exists():
+        with urlopen('https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/lexicon-en-us.txt',timeout=90) as response:
+            data = response.read(40_000_000)
+        if not data.strip() or len(data)>=40_000_000:
+            raise RuntimeError('Invalid pronunciation lexicon')
+        lexicon.write_bytes(data)
     for tag, name in PACKS:
         if (ROOT / name).is_dir():
             continue

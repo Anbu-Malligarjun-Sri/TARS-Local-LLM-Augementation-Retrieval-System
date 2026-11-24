@@ -61,7 +61,7 @@ export function CommandInput(){
    </div>
   </form>
   {(chat.error || voice.error || offline.error) && <p role="alert" className="text-xs text-destructive">{offline.error || chat.error || voice.error}</p>}
-  {showVoice && <section aria-label="Browser voice" className="border border-border rounded p-3 space-y-3 text-xs">
+  {showVoice && <section aria-label="Browser voice" className="max-h-[50dvh] overflow-y-auto overscroll-contain border border-border rounded p-3 space-y-3 text-xs">
    <p>Browser voice: Tamil / English. Recognition may send microphone audio to your browser’s speech provider, even when the LLM is local. TARS stores the sent transcript as chat, not raw audio. Playback uses local voices.</p>
    <div className="flex flex-wrap gap-3 items-center border-b pb-2">
     <button disabled={processing || !chat.settingsReady} onClick={()=>void offline.record(voice.language)}>Record locally with Whisper</button>

@@ -1,3 +1,4 @@
+import { FaceProfiles } from './FaceProfiles';
 import { CodingJobsPanel } from '@/components/jobs/CodingJobsPanel';
 import { ToolsPanel } from '@/components/tools/ToolsPanel';
 import { MemoryPanel } from '@/components/memory/MemoryPanel';
@@ -65,6 +66,7 @@ export function MonolithSidebar() {
           className="flex-1 min-h-0 overscroll-contain overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
         >
           <MemoryPanel />
+          <FaceProfiles />
           <ToolsPanel />
           <CodingJobsPanel />
           <PersonalityPanel />

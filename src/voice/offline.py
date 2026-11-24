@@ -36,16 +36,18 @@ def transcribe(pcm,language):
 def synthesizer():
     import sherpa_onnx as sherpa
     folder = ROOT/'vits-piper-en_US-lessac-medium'
-    if not (folder/'en_US-lessac-medium.onnx').is_file():
+    if not (folder/'en_US-lessac-medium.onnx').is_file() or not (ROOT/'lexicon-en-us.txt').is_file():
         raise FileNotFoundError('Install the Piper voice.')
     voice = sherpa.OfflineTtsVitsModelConfig(model=str(folder/'en_US-lessac-medium.onnx'),
-            tokens=str(folder/'tokens.txt'),data_dir=str(folder/'espeak-ng-data'))
+            tokens=str(folder/'tokens.txt'),lexicon=str(ROOT/'lexicon-en-us.txt'))
     return sherpa.OfflineTts(sherpa.OfflineTtsConfig(model=sherpa.OfflineTtsModelConfig(vits=voice,num_threads=2)))
 
 
 def synthesize(text):
     import numpy as np
     audio = synthesizer().generate(text,sid=0,speed=1)
+    if not audio.sample_rate or not len(audio.samples):
+        raise ValueError('The local voice could not pronounce this text.')
     buf = BytesIO()
     with wave.open(buf,'wb') as wav:
         wav.setparams((1,2,audio.sample_rate,0,'NONE','not compressed'))

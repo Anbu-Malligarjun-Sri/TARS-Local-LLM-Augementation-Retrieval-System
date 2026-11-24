@@ -8,8 +8,7 @@ from urllib.request import urlopen
 def main():
     folder = Path(__file__).resolve().parents[1] / '.runtime' / 'face-models'
     folder.mkdir(parents=True,exist_ok=True)
-    with urlopen('https://api.github.com/repos/opencv/opencv_zoo/commits/main',timeout=30) as r:
-        revision = json.load(r)['sha']
+    revision = '48b10fa505aeb51fbd127fc60a5c660040e823b7'
     for name,kind in [('face_detection_yunet_2023mar','face_detection_yunet'),('face_recognition_sface_2021dec','face_recognition_sface')]:
         suffix = f'opencv/opencv_zoo/{revision}/models/{kind}/{name}.onnx'
         with urlopen('https://raw.githubusercontent.com/'+suffix,timeout=30) as response:
