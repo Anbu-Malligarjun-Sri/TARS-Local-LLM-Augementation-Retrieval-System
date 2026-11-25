@@ -32,7 +32,8 @@ export function MemoryPanel() {
     finally { setBusy(false); }
   };
   return <>
-    <button className={`${button} w-full flex gap-2 items-center`} onClick={() => {setOpen(true); void run(refresh);}}><Database size={16}/> Personal memory</button>
+    <button className={`${button} w-full flex gap-2 items-center`} onClick={() => {setTab('facts'); setOpen(true); void run(refresh);}}><Database size={16}/> Personal memory</button>
+    <button className={`${button} w-full text-left`} onClick={()=>{setTab('graph');setOpen(true);void run(refresh);}}>Memory graph</button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogTitle>Personal memory</DialogTitle>

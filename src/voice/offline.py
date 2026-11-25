@@ -3,6 +3,7 @@ from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 import wave
+import re
 
 ROOT = Path(__file__).resolve().parents[2]/'.runtime/speech-models'
 
@@ -24,6 +25,9 @@ def transcribe(pcm,language):
         raise ValueError('Record between 0.1 and 20 seconds at 16 kHz.')
     model = recognizer(language)
     stream = model.create_stream()
+    if language == 'ta':
+        # Tamil glyphs often require several Whisper vocabulary tokens.
+        stream.set_option('max_tokens_per_second','24')
     samples = np.frombuffer(pcm,dtype='<i2').astype('float32') / 32768
     if abs(samples).max()<.002:
         raise ValueError('No audible signal.')
@@ -43,8 +47,22 @@ def synthesizer():
     return sherpa.OfflineTts(sherpa.OfflineTtsConfig(model=sherpa.OfflineTtsModelConfig(vits=voice,num_threads=2)))
 
 
+@lru_cache(maxsize=1)
+def tamil_synthesizer():
+    from piper import PiperVoice
+    model = ROOT/'tamil-piper/ta_IN-rasa_female-medium.onnx'
+    if not model.is_file():
+        raise FileNotFoundError('Install the Tamil Piper voice.')
+    return PiperVoice.load(model)
+
+
 def synthesize(text):
     import numpy as np
+    if re.search(r'[\u0b80-\u0bff]',text):
+        buf = BytesIO()
+        with wave.open(buf,'wb') as wav:
+            tamil_synthesizer().synthesize_wav(text,wav)
+        return buf.getvalue()
     audio = synthesizer().generate(text,sid=0,speed=1)
     if not audio.sample_rate or not len(audio.samples):
         raise ValueError('The local voice could not pronounce this text.')

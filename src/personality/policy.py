@@ -4,7 +4,7 @@ import json
 import re
 from pydantic import BaseModel, ConfigDict, StrictBool
 
-from .tanglish import is_tanglish
+from .tanglish import is_tanglish, nearby_dialogue
 
 VERSION = 'tars-persona-3'
 
@@ -66,6 +66,7 @@ def resolve(text: str, style: Style, humor: float = .6, directness: float = .9) 
         'அவசர', 'விபத்த', 'மருத்துவமனை', 'இறந்து', 'தற்கொலை', 'நெஞ்சு வலி', 'நெஞ்சுவலி',
         'இறந்த', 'மாரடைப்பு', 'மூச்சுத் திணற', 'மூச்சு விட முடிய', 'மறைந்துவிட்ட',
     ))
+    serious = serious or bool(re.search(r'\b(?:avasaram|accident|nenju vali|moochu vida mudiyala|bayama|romba kashtama irukku)\b',text,re.I))
     technical = bool(re.search(r'```|\b(code|python|typescript|function|traceback|json|sql|citation|sources?)\b', text, re.I))
     technical = technical or any(word in text for word in ('நிரலாக்க', 'நிரல்', 'குறியீடு', 'மேற்கோள்'))
     playful = style.audience == 'owner' or (style.audience == 'friend' and style.playful)
@@ -106,6 +107,8 @@ def instructions(text: str, style: Style, humor: float, directness: float) -> st
         base += ('Reply in conversational Tamil written with Latin letters (Tanglish). Keep technical English words natural. '
                  'Use Latin script for the whole reply unless quoting requested text. '
                  'Example: "Konjam help venum" → "Edhula udhavi venum? Oru example sollu." ')
+        if policy['audience']=='owner' and policy['humor']:
+            base += nearby_dialogue(text)
         if policy['humor']:
             base += 'Keep any dry joke in Tanglish too. Example tone: "Meedhi list odipogaadhu." '
     elif policy['language'] == 'ta-IN':

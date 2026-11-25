@@ -1,7 +1,6 @@
 """Install verified OpenCV Zoo ONNX models in private runtime storage."""
 from pathlib import Path
 import hashlib
-import json
 from urllib.request import urlopen
 
 

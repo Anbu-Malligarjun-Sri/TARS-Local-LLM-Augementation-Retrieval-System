@@ -14,23 +14,27 @@ export function CommandInput(){
  const {status,currentSessionId,isVoiceMode:showVoice,toggleVoiceMode}=useTarsStore();
  const muted=useTarsStore(s=>s.isMuted);
  const lastReply=useTarsStore(s=>s.messages.filter(m=>m.role==='tars').at(-1)?.content || '');
- const offline=useOfflineVoice(currentSessionId,muted,text=>{dictated.current=true;setInput(text);});
+ const localDictation=useRef(false),localReply=useRef(false);
+ const offline=useOfflineVoice(currentSessionId,muted,text=>{localDictation.current=true;dictated.current=true;setInput(text);});
  const chat=useTarsChat(event=>voiceEvents.current?.(event));
  const submitRef=useRef<(text:string)=>void>();
- const voice=useBrowserVoice(text=>{dictated.current=true;setInput(text);if(autoSend)submitRef.current?.(text);});
+ const voice=useBrowserVoice(text=>{localDictation.current=false;dictated.current=true;setInput(text);if(autoSend)submitRef.current?.(text);});
  const audioTurn=useRef(false);const requestStart=useRef(0);
- voiceEvents.current=event=>{if(audioTurn.current){if(event.type==='start')voice.beginReply(requestStart.current);voice.onEvent(event);}};
+ voiceEvents.current=event=>{
+  if(localReply.current && event.type==='end' && event.full_response){localReply.current=false;void offline.speak(event.full_response);return;}
+  if(audioTurn.current){if(event.type==='start')voice.beginReply(requestStart.current);voice.onEvent(event);}};
  const busy=status==='thinking' || status==='speaking';
  const processing=offline.phase!=='idle' || busy || voice.listening || voice.speaking;
  const submit=(text:string)=>{
   if(!text.trim() || busy || offline.phase!=='idle')return;
   if(voice.speaking)voice.stop();
-  audioTurn.current=dictated.current;
+  localReply.current=dictated.current && localDictation.current;
+  audioTurn.current=dictated.current && !localReply.current;
   requestStart.current=performance.now();
   if(chat.sendMessage(text,style)){setInput('');dictated.current=false;}else voice.stop();
  };
  submitRef.current=submit;
- const stop=()=>{offline.stop();voice.stop();audioTurn.current=false;void chat.cancelTurn();};
+ const stop=()=>{offline.stop();voice.stop();audioTurn.current=false;localReply.current=false;void chat.cancelTurn();};
  const chooseAudience=(audience:ChatStyle['audience'])=>{
   stop();useTarsStore.getState().createNewSession(audience==='owner'?'Owner conversation':`${audience} style preview`);
   const next={audience,playful:false};styleBySession.current.set(useTarsStore.getState().currentSessionId!,next);setStyle(next);setInput('');
@@ -66,7 +70,7 @@ export function CommandInput(){
    <div className="flex flex-wrap gap-3 items-center border-b pb-2">
     <button disabled={processing || !chat.settingsReady} onClick={()=>void offline.record(voice.language)}>Record locally with Whisper</button>
     {offline.phase==='recording' && <button onClick={offline.finish}>Finish and transcribe</button>}
-    <button disabled={processing || muted || !lastReply} onClick={()=>void offline.speak(lastReply)}>Read latest reply with English Piper</button>
+    <button disabled={processing || muted || !lastReply} onClick={()=>void offline.speak(lastReply)}>Read latest reply with local Piper</button>
     <span role="status">{offline.phase==='idle'?'Local models · review transcript before Send · playback up to 600 characters':offline.phase}</span>
    </div>
    <label className="flex gap-2"><input type="checkbox" checked={voice.consent} onChange={e=>voice.setConsent(e.target.checked)}/>I consent to browser-provider speech recognition for this session.</label>

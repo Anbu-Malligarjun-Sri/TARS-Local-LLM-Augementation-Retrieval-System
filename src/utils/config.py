@@ -100,6 +100,7 @@ class TARSConfig(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    capture_chat_facts: bool = True
     memory_backend: Literal["sql", "legacy"] = "sql"
     memory_db_path: str = str(Path(__file__).resolve().parents[2] / ".runtime" / "memory.sqlite3")
     memory_database_url: str = ""

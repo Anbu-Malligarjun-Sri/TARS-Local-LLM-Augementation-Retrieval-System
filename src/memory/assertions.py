@@ -27,7 +27,7 @@ def terms(text):
 def assertions(text):
     text = text.strip()
     if any(mark in text for mark in ('?', '"', '“', '”', chr(96))) or re.search(
-        r"(?i)\b(?:hypothetical|pretend|example|password|token|secret|pin|don't remember|do not (?:store|remember)|if|unless)\b",text
+        r"(?i)\b(?:hypothetical|pretend|example|password|token|secret|pin|do(?:n't| not) (?:save|store|remember)|off the record|keep this private|if|unless)\b",text
     ):
         return []
     result = []

@@ -239,7 +239,9 @@ class Repository:
         claims = self.claims(owner,audience,cloud)
         terms = memory_terms(query)
         try:
-            query_vector = (self.query_embedder or self.embedder)(query)
+            aliases = sorted(terms.intersection({'name','likes','lives_in','works_on'}))
+            hint = ' '.join(key.replace('_',' ') for key in aliases if key not in query.casefold())
+            query_vector = (self.query_embedder or self.embedder)(query + (' '+hint if hint else ''))
         except Exception:
             # An unavailable embedding provider must not remove exact/graph recall.
             query_vector = [0.0] * self.dimension

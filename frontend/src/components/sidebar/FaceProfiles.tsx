@@ -32,13 +32,13 @@ function Capture() {
   useEffect(()=>{
     active.current=true;
     void refresh().catch(()=>{if(active.current)setNotice('Could not read face profiles.');});
-    return ()=>{active.current=false;generation.current++;stream.current?.getTracks().forEach(track=>track.stop());};
+    return ()=>{active.current=false;stream.current?.getTracks().forEach(track=>track.stop());};
   },[]);
   const preview=async()=>{
     cameraOff();
     const id=generation.current;
     const media=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
-    if(id!==generation.current || !video.current){media.getTracks().forEach(track=>track.stop());return;}
+    if(!active.current || id!==generation.current || !video.current){media.getTracks().forEach(track=>track.stop());return;}
     stream.current=media;video.current.srcObject=media;
     try {await video.current.play();if(id===generation.current)setReady(true);} catch(e){cameraOff();throw e;}
   };

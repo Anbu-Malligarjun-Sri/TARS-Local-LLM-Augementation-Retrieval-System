@@ -13,7 +13,7 @@ import { SystemStatus } from './SystemStatus';
 import { MissionStats } from './MissionStats';
 
 export function MonolithSidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(()=>window.matchMedia?.("(max-width: 640px)").matches ?? false);
   const { isMuted, toggleMute, toggleHistory, toggleCommandPalette } = useTarsStore();
 
   return (

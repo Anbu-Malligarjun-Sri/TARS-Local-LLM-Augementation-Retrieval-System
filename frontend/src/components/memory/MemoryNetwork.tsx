@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { MemoryGraph } from '@/services/memoryApi';
 
 export function MemoryNetwork({graph, inspect}: {graph:MemoryGraph; inspect:(id:string)=>void}) {
   const [focus,setFocus] = useState('');
+  const drag=useRef<{x:number;y:number;left:number;top:number}>();
   const [zoom,setZoom] = useState(1);
   const [query,setQuery] = useState('');
   const {points,edges,center} = useMemo(() => {
@@ -33,11 +34,20 @@ export function MemoryNetwork({graph, inspect}: {graph:MemoryGraph; inspect:(id:
       <span className="text-xs">{Math.round(zoom*100)}% · {points.size} of {graph.nodes.length} nodes</span>
     </div>
     {query && <div className="flex gap-2 flex-wrap">{graph.nodes.filter(n=>n.toLowerCase().includes(query.toLowerCase())).slice(0,20).map(n=><button key={n} className="underline" onClick={()=>{setFocus(n);setQuery('');}}>{n}</button>)}</div>}
-    <div className="overflow-auto overscroll-contain border rounded bg-background" style={{height:310}}>
+    <div className="overflow-auto overscroll-contain border rounded bg-background" style={{height:310}}
+      onPointerDown={e=>{
+        if(e.button!==0 || e.pointerType!=='mouse' || (e.target as Element).closest('[role=button]'))return;
+        const pane=e.currentTarget;
+        drag.current={x:e.clientX,y:e.clientY,left:pane.scrollLeft,top:pane.scrollTop};
+        pane.setPointerCapture(e.pointerId);
+      }} onPointerMove={e=>{if(drag.current){
+        e.currentTarget.scrollLeft=drag.current.left+drag.current.x-e.clientX;
+        e.currentTarget.scrollTop=drag.current.top+drag.current.y-e.clientY;
+      }}} onLostPointerCapture={()=>{drag.current=undefined;}}>
       <svg role="group" aria-label="Memory connections" viewBox={[-width/2,-height/2,width,height].join(' ')} style={{width:zoom*100+'%',height:zoom*100+'%'}}>
         {edges.map(e=><line key={e.claim_id} x1={points.get(e.source)!.x} y1={points.get(e.source)!.y} x2={points.get(e.target)!.x} y2={points.get(e.target)!.y} stroke="currentColor" opacity={e.source===center || e.target===center ? .65:.2}><title>{e.relationship}</title></line>)}
         {[...points].map(([name,p])=><g key={name} role="button" tabIndex={0} aria-label={'Focus '+name} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setFocus(name);}}} onClick={()=>setFocus(name)} transform={`translate(${p.x} ${p.y})`} className="cursor-pointer">
-          <title>{name}</title><circle r={name===center?12:8} fill={name===center?'#efa951':'#72afb7'}/>
+          <title>{name}</title><rect x={-42} y={-14} width={84} height={48} fill="transparent"/><circle r={name===center?12:8} fill={name===center?'#efa951':'#72afb7'}/>
           <text textAnchor="middle" y={28} fontSize={14} fill="currentColor">{name.length>20?name.slice(0,19)+'…':name}</text>
         </g>)}
       </svg>

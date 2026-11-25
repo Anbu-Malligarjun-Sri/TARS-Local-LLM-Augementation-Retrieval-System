@@ -68,7 +68,6 @@ export function ChatTerminal() {
           </motion.div>
         )}
         
-        {/* Scroll anchor */}
         
       </div>
       
@@ -118,28 +117,7 @@ function WelcomeScreen() {
         </p>
       </motion.div>
       
-      {/* System Status */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-8 grid grid-cols-3 gap-4 text-center"
-      >
-        {[
-          { label: 'MEMORY', value: '512 GB' },
-          { label: 'UPTIME', value: '∞' },
-          { label: 'STATUS', value: 'READY' },
-        ].map((stat) => (
-          <div key={stat.label} className="space-y-1">
-            <p className="font-terminal text-[10px] text-muted-foreground/50 uppercase tracking-widest">
-              {stat.label}
-            </p>
-            <p className="font-terminal text-sm text-tars-amber">
-              {stat.value}
-            </p>
-          </div>
-        ))}
-      </motion.div>
+
     </div>
   );
 }

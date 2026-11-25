@@ -32,3 +32,23 @@ def weights():
 def is_tanglish(text):
     vec = features(text)
     return sum(weights()[i]*v for i,v in vec.items()) > .72
+
+
+@lru_cache
+def parallel_examples():
+    corpus = Path(__file__).resolve().parents[2]/'finetuning/tanglish_pairs.tsv'
+    return [(features(question),question,meaning,answer)
+            for line in corpus.read_text(encoding='utf-8').splitlines()
+            for question,meaning,answer in [line.split('\t')]]
+
+
+def nearby_dialogue(text):
+    """Retrieve a parallel demonstration only for closely matching wording."""
+    query = features(text)
+    scored = [(sum(query.get(i,0)*v for i,v in example.items()),question,meaning,answer)
+              for example,question,meaning,answer in parallel_examples()]
+    score,question,meaning,answer = max(scored)
+    if score < .64:
+        return ''
+    return (f'Illustrative Tanglish dialogue: {question} (meaning: {meaning}) → {answer}. '
+            'Example names and details are fictional. Answer the actual user. ')

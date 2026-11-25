@@ -84,7 +84,7 @@ class TARSEngine:
             if prior and any(m.metadata.get("local_only_context") for m in prior.messages):
                 raise PermissionError("This conversation contains local-only memory; use local routing or start a new conversation")
         self.memory.add_message("user", user_input, conversation_id=conversation_id,
-                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud, "audience": style.audience, "capture_assertions": style.audience == "owner"})
+                                metadata={"local_only_context": repository is not None and not self.config.allow_cloud, "audience": style.audience, "capture_assertions": self.config.capture_chat_facts and style.audience == "owner"})
         history = self.memory.get_history(
             conversation_id=conversation_id,
             max_messages=20,
