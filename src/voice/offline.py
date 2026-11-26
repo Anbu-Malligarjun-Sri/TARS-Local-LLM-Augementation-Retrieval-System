@@ -11,12 +11,15 @@ ROOT = Path(__file__).resolve().parents[2]/'.runtime/speech-models'
 @lru_cache(maxsize=2)
 def recognizer(language):
     import sherpa_onnx as sherpa
-    folder = ROOT/'sherpa-onnx-whisper-tiny'
-    if not (folder/'tiny-decoder.int8.onnx').is_file():
-        raise FileNotFoundError('Install the Whisper model.')
+    size = 'small' if language == 'ta' else 'tiny'
+    folder = ROOT / f'sherpa-onnx-whisper-{size}'
+    if not (folder / f'{size}-decoder.int8.onnx').is_file():
+        raise FileNotFoundError(f'Install the Whisper {size} model.')
     return sherpa.OfflineRecognizer.from_whisper(
-        encoder=str(folder/'tiny-encoder.int8.onnx'), decoder=str(folder/'tiny-decoder.int8.onnx'),
-        tokens=str(folder/'tiny-tokens.txt'),language=language,task='transcribe',num_threads=2)
+        encoder=str(folder / f'{size}-encoder.int8.onnx'),
+        decoder=str(folder / f'{size}-decoder.int8.onnx'),
+        tokens=str(folder / f'{size}-tokens.txt'), language=language,
+        task='transcribe', num_threads=2)
 
 
 def transcribe(pcm,language):

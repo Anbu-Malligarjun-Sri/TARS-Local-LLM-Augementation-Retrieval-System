@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Desk companion · Interactive preview</title>
+  <link rel="stylesheet" href="/assets/visitor.css">
+  <script type="module" src="/assets/visitor.js"></script>
+</head>
+<body>
+  <header><span class="mark" aria-hidden="true">◧</span> Companion studio</header>
+  <main>
+    <section class="portrait" aria-label="Simulated desktop companion">
+      <div class="portrait-title"><p class="overline">Interactive prototype</p><h1>Meet your<br>desk companion.</h1></div>
+      <div class="stage" aria-hidden="true">
+        <div class="robot" id="robot" data-state="idle">
+          <div class="shell"><div class="glass"><i></i><i></i></div></div>
+          <div class="neck"></div><div class="base"><div class="grille"></div></div>
+        </div>
+      </div>
+      <div class="caption"><span class="lamp" aria-hidden="true"></span><span id="state">Idle</span><span class="sim">Simulated display</span></div>
+    </section>
+    <section class="chat" aria-labelledby="chat-title">
+      <div class="chat-head"><h2 id="chat-title">Conversation preview</h2><button type="button" id="end" class="link" hidden>End visit</button></div>
+      <p class="intro">Try three scripted scenes. Plan a task, teach your companion a project name, then see what it remembers.</p>
+      <div class="settings"><label for="language">Reply language</label><select id="language"><option value="en">English</option><option value="ta" lang="ta">தமிழ் · Tamil</option><option value="tanglish">Tanglish</option></select></div>
+      <div id="welcome">
+        <p>Each visit lasts 15 minutes and includes five replies. Your conversation clears when you end the visit.</p>
+        <button type="button" class="primary" id="start" disabled>Start visit</button>
+      </div>
+      <div id="session" hidden>
+        <div class="meter"><span id="quota"></span><span id="timer" aria-label="Time remaining"></span></div>
+        <div id="history" role="region" aria-label="Conversation" tabindex="0"></div>
+        <form id="composer">
+          <label for="message">Your message</label>
+          <div class="input-row"><input id="message" type="text" maxlength="500" autocomplete="off" placeholder="Choose a scene or type a message"><button class="primary" id="send" type="submit">Send</button><button class="primary" type="button" id="stop" hidden>Stop</button></div>
+        </form>
+        <div id="scenes" aria-label="Suggested messages"></div>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <button type="button" id="recheck" class="link" hidden>Check connection</button>
+      <noscript>Enable JavaScript to start a visit.</noscript>
+    </section>
+  </main>
+</body>
+</html>

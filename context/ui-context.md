@@ -1,6 +1,10 @@
 # UI context
 
+The desktop sidebar and chat transcript have independent scroll containers. **Memory graph** opens the interactive neighborhood with focus, search, pan, zoom and source inspection. **Voice settings** offers local dictation with transcript review and optional playback. **Face profiles** requires a fresh capture action with consent. The rectangular Stop control cancels pending local recording and playback as well as chat generation.
+
 **Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
+
+The visitor preview has its own original CSS companion display, reply-language selector, three suggested messages, bounded composer, turn counter, countdown and Stop. The face shows waiting while a request is pending and replying when text arrives. The page holds the transcript in the DOM. Refresh restores quota and visit memory from the visitor API. [Visitor web spec](specs/R1-visitor-web.md)
 
 ## Theme
 

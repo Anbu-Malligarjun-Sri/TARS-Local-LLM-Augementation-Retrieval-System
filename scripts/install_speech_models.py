@@ -1,4 +1,4 @@
-"""Install official Sherpa model assets under ignored local storage."""
+"""Install local Whisper and Piper assets under ignored runtime storage."""
 import hashlib
 import json
 from pathlib import Path
@@ -19,7 +19,7 @@ def install_tamil_recognizer():
     files = {
         'small-decoder.int8.onnx':(262226114,'acad50b5c782696e91b55914cc5ab4f756f1532f76e22aa6fc615f39fb69a8ee'),
         'small-encoder.int8.onnx':(112442483,'4cbe7b22fa9026b843b60a68640c747de05bafb1a11b57edc0e66c232d9f33a9'),
-        'small-tokens.txt':(816730,''),
+        'small-tokens.txt':(816730,'b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126'),
     }
     for name,(length,digest) in files.items():
         path=folder/name
@@ -63,10 +63,11 @@ def main():
         partial.replace(path)
     install_tamil_recognizer()
     lexicon = ROOT/'lexicon-en-us.txt'
-    if not lexicon.exists():
+    lexicon_hash = '8b67ae549a465eee78f92ecb74644ad90c3c58ce65f19c68baf85878a10ef73a'
+    if not lexicon.exists() or hashlib.sha256(lexicon.read_bytes()).hexdigest() != lexicon_hash:
         with urlopen('https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/lexicon-en-us.txt',timeout=90) as response:
             data = response.read(40_000_000)
-        if not data.strip() or len(data)>=40_000_000:
+        if hashlib.sha256(data).hexdigest() != lexicon_hash:
             raise RuntimeError('Invalid pronunciation lexicon')
         lexicon.write_bytes(data)
     for tag, name in PACKS:

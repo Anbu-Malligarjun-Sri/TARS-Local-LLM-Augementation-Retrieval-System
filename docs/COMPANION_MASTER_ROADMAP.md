@@ -3,6 +3,8 @@
 **24 November 2026.** The owner selected the US market, a USD 49–125 retail target, and an INR 2,000–3,000 monthly demo budget. Use INR 3,000 as the ceiling. The [R0 release record](COMPANION_R0_RELEASE.md) includes the scope, assumptions and first R1 acceptance checks.
 
 
+The [local R1 visitor preview](R1_DESKTOP_COMPANION.md#try-the-visitor-preview) now demonstrates language switching, interruptible scripted replies and a visit-only project nickname. The next software milestone is the monthly spend ledger. Open-ended visitor inference, voice, waitlist and hosting remain separate release gates.
+
 ## 6. Voice, models, memory and training
 
 **Listening to speaking.** Start with an explicit push-to-talk event. Bind consent to the audio provider and language. Run endpoint detection, show interim words as tentative and send only a final transcript unless the user edits it. Echo suppression, noise suppression and voice activity detection serve different purposes. Benchmark each separately with the speaker playing and motors running. For hands-free mode, perform wake detection locally first. Keep only a short volatile pre-roll, indicate active capture and provide a real hardware mute. Verify actual wake-word and language support on the chosen chip. Release pseudo-duplex first (button interrupts playback and starts capture). For full duplex, feed a playback reference into echo cancellation and test double-talk before enabling automatic barge-in.

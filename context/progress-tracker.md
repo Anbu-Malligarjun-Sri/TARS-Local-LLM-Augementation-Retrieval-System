@@ -2,11 +2,11 @@
 
 **Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
 
-Last updated: 2026-11-24 (Asia/Calcutta).
+Last updated: 2026-11-25 (Asia/Calcutta).
 
 ## Current phase
 
-Companion R0 release scope and bilingual desktop baseline delivered. R1 local visitor-session service implemented. Open-ended sales-demo quality, real-browser audio and public deployment remain open. [Release record and measured results](../docs/COMPANION_R0_RELEASE.md)
+R1 now includes visitor sessions, scripted streaming, cancellation and turn limits. The private desktop has source-linked conversational facts, graph navigation, trained Tanglish routing, offline voice and multi-profile face matching. The separate visitor web client is running locally. The next R1 unit is atomic spend reservation and reconciliation, tested with simulated charges before any paid routing. Real-world sensor quality and open-ended visitor answer quality remain open. [Local companion runbook](../docs/R1_DESKTOP_COMPANION.md) [Release record and measured results](../docs/COMPANION_R0_RELEASE.md)
 
 Phase 5 units 14–15 local implementation delivered: versioned audience persona, isolated tone previews, opt-in Tamil/English browser recognition, sentence-level local speech and a rectangular Stop control. Real microphone/acoustic/code-switching acceptance remains pending. Phase 4 live coding execution remains blocked by sandbox provisioning; earlier external database/quality gates remain open.
 
@@ -17,6 +17,12 @@ The current companion increment is a private bilingual reference and a separate 
 Build a persistent TARS personal intelligence for routines/projects, interchangeable local/cloud models, graph memory, audience-aware personality, coding delegation and eventual phone assistance.
 
 ## Completed
+
+- **25 November 2026, R1 visitor web preview.** Served a buildless client on the isolated visitor origin with original companion artwork, three guided scenes, language selection, five-turn quota, countdown and Stop. A completed teaching scene sets a visit-only Firefly memory flag. Unsupported free text receives a scripted explanation. The service has no model or billing integration. [Acceptance spec](specs/R1-visitor-web.md)
+- **Verification.** 118 backend tests passed with one existing Chroma deprecation warning. A disposable Edge session exercised the preview at 1152×800 and 360×740, including cancelling before the prepare response arrived and during text output, reload with quota intact, cross-language recall, sibling-tab clearing, failed stream recovery and expiry with a simulated browser clock. API tests separately used a controlled server clock and independent cookies. Browser requests stayed on the visitor origin. Physical phone testing, provider evaluation and public hosting remain open. [Run and reproduce](../docs/R1_DESKTOP_COMPANION.md#try-the-visitor-preview)
+
+- **25 November 2026.** Verified independent sidebar scrolling in Edge, graph selection and zoom, synthetic visitor mid-stream cancellation and persistent owner recall with two injected model handlers. Local Qwen answered two Romanized Tamil prompts and switched back to English. Some jokes repeated. Validated 36 training and eight held-out Qwen examples with the upstream tokenizer. Adapter training is deferred. Generated English and Tamil audio exercised local speech. No live camera enrollment or microphone recording was performed. [R1 scope](specs/R1-stream-memory-media.md)
+- **Verification.** 116 backend and 22 frontend tests passed. Type checking and the production build passed. Lint reported seven existing component-export warnings. The paired desktop returned HTTP 200. A local English synthesis/recognition round trip recovered the example sentence. Tamil transcripts varied, including a lost name ending on the paired endpoint. The separate tokenizer preflight ran locally with a maximum combined length of 95 tokens.
 
 - **24 November 2026, R0 / first R1 unit.** Removed the browser microphone locale from outgoing chat style. Persona v2 resolves the current request, honors explicit English/Tamil switches, scopes examples and dry humor to the answer language, and narrows canned English shortcuts. Playback selects compatible local voices from each sentence. Updated operator docs and added isolated synthetic bilingual acceptance scripts.
 - Established the visitor allowlist, account/retention boundaries, asset inventory, cost worksheet and public quality gate. Implemented an independent loopback visitor service with 15-minute fixed expiry, capped admission, host/origin checks and idempotent begin/end. Exercised the documented PowerShell create/read/end flow on a temporary listener. Visitor inference, speech, UI, billing and deployment remain future R1 units.

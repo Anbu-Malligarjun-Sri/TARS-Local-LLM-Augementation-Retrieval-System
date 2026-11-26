@@ -79,12 +79,12 @@ export function CommandInput(){
     <label>Local voice <select aria-label="Local voice" value={voice.voiceURI} onChange={e=>voice.setVoiceURI(e.target.value)} className="bg-background border rounded p-1"><option value="">Automatic local voice</option>{voice.voices.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}</select></label>
    </div>
    <p>Choose the language you’ll speak into the microphone. TARS follows the language of your question, or you can ask for a reply in Tamil or English. Review the transcript before sending.</p>
-   <label className="flex gap-2"><input type="checkbox" checked={autoSend} onChange={e=>setAutoSend(e.target.checked)}/>Send final transcript automatically</label>
+   <label className="flex gap-2"><input type="checkbox" checked={autoSend} onChange={e=>setAutoSend(e.target.checked)}/>Send browser-provider transcript automatically</label>
    <button type="button" disabled={!voice.consent || !voice.supported || !chat.settingsReady} onClick={()=>{stop();voice.listen();}} className="border rounded px-3 py-2 disabled:opacity-50">{busy || voice.speaking?'Interrupt and listen':'Start microphone'}</button>
    <button type="button" onClick={stop} className="border rounded px-3 py-2 ml-2">Stop voice</button>
-   <p role="status">{voice.listening?'Microphone listening (20-second limit)':voice.speaking?'Playing local speech':'Microphone off'}{!voice.supported?' · Recognition unsupported here; use text.':''}</p>
+   <p role="status">{voice.listening?'Microphone listening (20-second limit)':voice.speaking?'Playing local speech':'Browser microphone off'}{!voice.supported?' · Browser recognition unavailable here. Use local Whisper or type.':''}</p>
    {voice.partial && <p aria-live="polite">Partial transcript: {voice.partial}</p>}
-   {!voice.voices.length && <p>No local voice for this language is currently available; replies remain text.</p>}
+   {!voice.voices.length && <p>No browser playback voice is available for this language. Local Piper is available separately.</p>}
    <details><summary>Measured timings (this page only)</summary><p>Milliseconds; median / p95 across up to 50 samples. Stop timing measures local API dispatch, not acoustic silence or provider shutdown.</p><pre>{JSON.stringify(voice.metrics,null,2)}</pre></details>
   </section>}
  </div>;

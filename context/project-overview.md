@@ -1,5 +1,7 @@
 # TARS personal intelligence
 
+As of 25 November 2026, the paired desktop captures selected owner facts, displays their relationships, recognizes typed Tanglish and supports offline English and Tamil voice. Named consenting people can enroll and remove a local face profile. The isolated visitor service can stream and cancel scripted turns. The local visitor web client demonstrates three guided scenes and visit-scoped recall. Paid inference, public hosting and physical hardware remain upcoming. [Companion guide](../docs/R1_DESKTOP_COMPANION.md)
+
 The companion targets US buyers at USD 49–125. The demo operating target is INR 2,000/month with a hard ceiling of INR 3,000/month. [R0 decisions and release gates](../docs/COMPANION_R0_RELEASE.md)
 
 **Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.

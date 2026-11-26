@@ -6,6 +6,8 @@
 
 # TARS Chatbot
 
+The [local companion guide](docs/R1_DESKTOP_COMPANION.md) covers conversation memory, the interactive graph, Tanglish, offline speech and consenting face profiles. The [visitor preview runbook](docs/R1_DESKTOP_COMPANION.md#try-the-visitor-preview) opens a separate guided conversation on loopback. The [Qwen LoRA recipe](finetuning/QWEN_TANGLISH.md) includes a tokenizer check and a separate GPU training procedure.
+
 The [R0 companion release scope](docs/COMPANION_R0_RELEASE.md) records the US price target, monthly demo budget, visitor permissions and local bilingual acceptance run.
 
 Phase 5 adds audience previews, Tamil/English browser voice and a rectangular Stop control. See [voice setup and acceptance limits](docs/PHASE_5_VOICE.md). [Phase 4 coding jobs](docs/PHASE_4_CODING.md) remain blocked at live sandbox provisioning.

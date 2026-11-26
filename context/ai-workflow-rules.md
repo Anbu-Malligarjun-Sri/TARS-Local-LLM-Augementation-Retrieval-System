@@ -1,5 +1,7 @@
 # AI workflow rules
 
+For the active R1 increment, preserve the separation between the paired desktop and visitor service. Use generated media in unattended checks and record real microphone, speaker and face accuracy as separate acceptance work. Run the [LoRA tokenizer preflight](../finetuning/QWEN_TANGLISH.md) before allocating training compute.
+
 **Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
 
 ## Approach

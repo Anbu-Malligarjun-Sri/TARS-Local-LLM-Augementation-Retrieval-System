@@ -1,5 +1,7 @@
 # Companion R0 · US visitor demo
 
+This document records the R0 baseline. The subsequent [R1 companion guide](R1_DESKTOP_COMPANION.md) covers the implemented visitor turn and streaming endpoints and the current private desktop.
+
 Decision record · 24 November 2026. This is the release scope for the first visitor experience. The working software today is the paired desktop assistant. The public demo needs its own build, session service and deployment. [Master roadmap](COMPANION_MASTER_ROADMAP.md)
 
 ## Release decisions
@@ -66,7 +68,7 @@ On 24 November the local launcher loaded Qwen 3.5 9B and Nomic, the desktop UI a
 
 ## Run the first R1 service unit
 
-The separate visitor app currently implements only begin, inspect and end visit. It keeps a maximum of 64 active visits in one process and discards them after 15 minutes or restart. It accepts the dedicated host `visitor.localhost`. From the repository root, run one worker:
+The first visitor implementation covered begin, inspect and end visit. See the [current visitor preview](R1_DESKTOP_COMPANION.md#try-the-visitor-preview) for the browser experience and turn lifecycle. It keeps a maximum of 64 active visits in one process and discards them after 15 minutes or restart. It accepts the dedicated host `visitor.localhost`. From the repository root, run one worker:
 
 ```powershell
 ..\.venv\Scripts\python.exe -m uvicorn demo.api:app --host 127.0.0.1 --port 8091
@@ -82,4 +84,4 @@ Invoke-RestMethod $visitUrl -Headers $visitHeaders -WebSession $demoVisit
 Invoke-RestMethod $visitUrl -Method Delete -Headers $visitHeaders -WebSession $demoVisit
 ```
 
-**Next R1 unit.** Add visitor-bound create-turn streaming and Stop using a simulated provider first. Exercise cancellation before the first token, simultaneous requests at the quota ceiling and lost connections. Add spend reservations before enabling a paid provider. Attach the visitor UI after these checks pass. Hardware work starts with a USB display and physical stop button under R2.
+**Sequence recorded at R0.** Add visitor-bound create-turn streaming and Stop using a simulated provider first. Exercise cancellation before the first token, simultaneous requests at the quota ceiling and lost connections. Add spend reservations before enabling a paid provider. Attach the visitor UI after these checks pass. Hardware work starts with a USB display and physical stop button under R2.

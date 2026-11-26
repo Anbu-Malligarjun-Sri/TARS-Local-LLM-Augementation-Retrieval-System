@@ -1,35 +1,38 @@
 """Isolated, single-worker visitor preview. No owner or paid-provider dependencies."""
 import asyncio
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import json
+import math
+from pathlib import Path
 import secrets
 import time
 from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from .dialogue import PROMPTS, response as scripted_response
 
 COOKIE = "companion_visit"
 TTL_SECONDS = 900
-SAMPLES = {
-    "en": "Pick one task you can finish today. The list can survive the suspense.",
-    "ta": "இன்று முடிக்கக்கூடிய ஒரு வேலையைத் தேர்ந்தெடு. பட்டியல் காத்திருக்கட்டும்.",
-    "tanglish": "Innaikku mudikka mudiyura oru velaiya therndhedu. List konjam kaathirukkattum.",
-}
+WEB = Path(__file__).with_name("web")
+TURN_LIMIT = 5
 
 
 @dataclass
 class Visit:
     deadline: float
+    id: UUID = field(default_factory=uuid4)
     count: int = 0
     turn: UUID | None = None
     streaming: bool = False
-    language: str = "en"
+    reply: str = ""
+    remembers_firefly: bool = False
+    pending_memory: bool = False
 
 
 class TurnRequest(BaseModel):
@@ -77,6 +80,13 @@ def create_app(clock=time.monotonic, capacity: int = 64) -> FastAPI:
                 return Response(status_code=413)
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+            "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        )
+        response.headers["Permissions-Policy"] = "microphone=(), camera=(), geolocation=()"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
         return response
 
     def key(request):
@@ -87,7 +97,25 @@ def create_app(clock=time.monotonic, capacity: int = 64) -> FastAPI:
         visit = visits.get(key(request))
         if visit is None:
             raise HTTPException(401, "Start a new visit.")
+        expected = request.headers.get("x-demo-visit")
+        if expected is not None and expected != str(visit.id):
+            raise HTTPException(409, "This visit was replaced in another tab.")
         return visit
+
+    @app.get("/")
+    async def page():
+        return FileResponse(WEB / "index.html")
+
+    @app.get("/assets/{name}")
+    async def asset(name: str):
+        types = {"visitor.js": "text/javascript", "visitor.css": "text/css"}
+        if name not in types:
+            raise HTTPException(404)
+        return FileResponse(WEB / name, media_type=types[name])
+
+    @app.get("/demo/scenes")
+    async def scenes():
+        return PROMPTS
 
     @app.post("/demo/visit")
     async def begin(request: Request, response: Response):
@@ -106,10 +134,14 @@ def create_app(clock=time.monotonic, capacity: int = 64) -> FastAPI:
 
     @app.get("/demo/visit")
     async def current(request: Request):
-        return {"expires_in_seconds": int(current_visit(request).deadline-clock())}
+        visit = current_visit(request)
+        return {"expires_in_seconds": math.ceil(visit.deadline-clock()),
+                "visit_id": visit.id, "turns_remaining": TURN_LIMIT-visit.count, "active_turn": visit.turn}
 
     @app.delete("/demo/visit",status_code=204)
     async def end(request: Request):
+        if request.headers.get("x-demo-visit") is not None:
+            current_visit(request)
         visits.pop(key(request),None)
         response = Response(status_code=204)
         response.delete_cookie(COOKIE,path="/demo/",httponly=True,samesite="strict",secure=request.url.scheme=="https")
@@ -120,12 +152,12 @@ def create_app(clock=time.monotonic, capacity: int = 64) -> FastAPI:
         visit = current_visit(request)
         if not body.message.strip():
             raise HTTPException(422,"Enter a message.")
-        if visit.turn or visit.streaming or visit.count >= 5:
+        if visit.turn or visit.streaming or visit.count >= TURN_LIMIT:
             raise HTTPException(429,"Active turn or visit quota reached.")
         visit.turn = uuid4()
-        visit.language = body.language
+        visit.reply, visit.pending_memory = scripted_response(body.message, body.language, visit.remembers_firefly)
         visit.count += 1
-        return {"id":visit.turn,"provider":"scripted-preview","turns_remaining":5-visit.count}
+        return {"id":visit.turn,"provider":"scripted-preview","turns_remaining":TURN_LIMIT-visit.count}
 
     @app.post("/demo/turns/{turn}/stream")
     async def stream(request: Request, turn: UUID):
@@ -143,12 +175,16 @@ def create_app(clock=time.monotonic, capacity: int = 64) -> FastAPI:
         async def events():
             try:
                 yield event("start")
-                for word in SAMPLES[visit.language].split():
+                for word in visit.reply.split():
                     await asyncio.sleep(.06)
                     if visit.turn != turn or visits.get(owner_key) is not visit or clock() >= visit.deadline:
                         yield event("cancelled")
                         return
                     yield event("chunk", word+" ")
+                if visit.turn != turn or visits.get(owner_key) is not visit or clock() >= visit.deadline:
+                    yield event("cancelled")
+                    return
+                visit.remembers_firefly |= visit.pending_memory
                 yield event("end")
             finally:
                 visit.streaming = False

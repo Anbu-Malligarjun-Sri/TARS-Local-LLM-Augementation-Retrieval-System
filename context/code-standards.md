@@ -1,5 +1,7 @@
 # Code standards
 
+For conversation memory, test source attribution, deduplication, correction and retrieval across model changes using temporary storage. Keep router training examples separate from held-out cases. For local media, bound request size and inference concurrency, release browser tracks on Stop and reject ambiguous face matches. Use generated audio and synthetic templates for unattended checks.
+
 **Product direction · 23 November 2026.** The [companion robot master roadmap](../docs/COMPANION_MASTER_ROADMAP.md) governs upcoming work. Start with R0 and the isolated public demo (R1), alongside the USB tabletop prototype (R2). Earlier phase records below describe the desktop baseline.
 
 These are target standards for new/touched code. Existing violations are recorded in the audit; this file does not claim they are fixed.
